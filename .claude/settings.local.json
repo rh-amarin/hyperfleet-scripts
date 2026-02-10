@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./hf.cluster.list.sh:*)",
+      "Bash(chmod:*)",
+      "Bash(./hf.cluster.table.sh:*)"
+    ]
+  }
+}
