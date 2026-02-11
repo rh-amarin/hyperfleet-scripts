@@ -40,6 +40,9 @@ HF_DB_PORT_FILE="$HF_CONFIG_DIR/db-port"
 HF_DB_NAME_FILE="$HF_CONFIG_DIR/db-name"
 HF_DB_USER_FILE="$HF_CONFIG_DIR/db-user"
 HF_DB_PASSWORD_FILE="$HF_CONFIG_DIR/db-password"
+HF_MAESTRO_CONSUMER_FILE="$HF_CONFIG_DIR/maestro-consumer"
+HF_MAESTRO_HTTP_ENDPOINT_FILE="$HF_CONFIG_DIR/maestro-http-endpoint"
+HF_MAESTRO_GRPC_ENDPOINT_FILE="$HF_CONFIG_DIR/maestro-grpc-endpoint"
 
 # Load config from files (env vars take precedence)
 _hf_load HF_API_URL "$HF_API_URL_FILE" "http://localhost:8000"
@@ -53,6 +56,9 @@ _hf_load HF_DB_PORT "$HF_DB_PORT_FILE" "5432"
 _hf_load HF_DB_NAME "$HF_DB_NAME_FILE" ""
 _hf_load HF_DB_USER "$HF_DB_USER_FILE" ""
 _hf_load HF_DB_PASSWORD "$HF_DB_PASSWORD_FILE" ""
+_hf_load HF_MAESTRO_CONSUMER "$HF_MAESTRO_CONSUMER_FILE" "cluster1"
+_hf_load HF_MAESTRO_HTTP_ENDPOINT "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "http://localhost:8100"
+_hf_load HF_MAESTRO_GRPC_ENDPOINT "$HF_MAESTRO_GRPC_ENDPOINT_FILE" "localhost:8090"
 
 # ============================================================================
 # Colors
@@ -151,6 +157,9 @@ hf_set_db_port() { _hf_set HF_DB_PORT "$HF_DB_PORT_FILE" "$1" "DB port"; }
 hf_set_db_name() { _hf_set HF_DB_NAME "$HF_DB_NAME_FILE" "$1" "DB name"; }
 hf_set_db_user() { _hf_set HF_DB_USER "$HF_DB_USER_FILE" "$1" "DB user"; }
 hf_set_db_password() { _hf_set HF_DB_PASSWORD "$HF_DB_PASSWORD_FILE" "$1" "DB password"; }
+hf_set_maestro_consumer() { _hf_set HF_MAESTRO_CONSUMER "$HF_MAESTRO_CONSUMER_FILE" "$1" "Maestro consumer"; }
+hf_set_maestro_http_endpoint() { _hf_set HF_MAESTRO_HTTP_ENDPOINT "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "$1" "Maestro HTTP endpoint"; }
+hf_set_maestro_grpc_endpoint() { _hf_set HF_MAESTRO_GRPC_ENDPOINT "$HF_MAESTRO_GRPC_ENDPOINT_FILE" "$1" "Maestro gRPC endpoint"; }
 
 hf_clear_context() { _hf_clear HF_KUBE_CONTEXT "$HF_CONTEXT_FILE" "Context"; }
 hf_clear_namespace() { _hf_clear HF_KUBE_NAMESPACE "$HF_NAMESPACE_FILE" "Namespace"; }

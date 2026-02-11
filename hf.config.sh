@@ -17,6 +17,12 @@ show_config() {
     echo "  cluster-id:   $(cat "$HF_CLUSTER_ID_FILE" 2>/dev/null || echo '<not set>')"
     echo "  cluster-name: $(cat "$HF_CLUSTER_NAME_FILE" 2>/dev/null || echo '<not set>')"
     echo ""
+    echo -e "${BOLD}Maestro Configuration${NC}"
+    echo ""
+    echo "  maestro-consumer:       ${HF_MAESTRO_CONSUMER:-<not set>}"
+    echo "  maestro-http-endpoint:  ${HF_MAESTRO_HTTP_ENDPOINT:-<not set>}"
+    echo "  maestro-grpc-endpoint:  ${HF_MAESTRO_GRPC_ENDPOINT:-<not set>}"
+    echo ""
     echo -e "${BOLD}Database Configuration${NC}"
     echo ""
     echo "  db-host:      ${HF_DB_HOST:-<not set>}"
@@ -40,6 +46,9 @@ set_config() {
         gcp-project)  hf_set_gcp_project "$value" ;;
         cluster-id)   hf_set_cluster_id "$value" ;;
         cluster-name) hf_set_cluster_name "$value" ;;
+        maestro-consumer)       hf_set_maestro_consumer "$value" ;;
+        maestro-http-endpoint)  hf_set_maestro_http_endpoint "$value" ;;
+        maestro-grpc-endpoint)  hf_set_maestro_grpc_endpoint "$value" ;;
         db-host)      hf_set_db_host "$value" ;;
         db-port)      hf_set_db_port "$value" ;;
         db-name)      hf_set_db_name "$value" ;;
@@ -62,6 +71,9 @@ clear_config() {
         gcp-project)  rm -f "$HF_GCP_PROJECT_FILE" && hf_info "gcp-project cleared" ;;
         cluster-id)   rm -f "$HF_CLUSTER_ID_FILE" && hf_info "cluster-id cleared" ;;
         cluster-name) rm -f "$HF_CLUSTER_NAME_FILE" && hf_info "cluster-name cleared" ;;
+        maestro-consumer)       rm -f "$HF_MAESTRO_CONSUMER_FILE" && hf_info "maestro-consumer cleared" ;;
+        maestro-http-endpoint)  rm -f "$HF_MAESTRO_HTTP_ENDPOINT_FILE" && hf_info "maestro-http-endpoint cleared" ;;
+        maestro-grpc-endpoint)  rm -f "$HF_MAESTRO_GRPC_ENDPOINT_FILE" && hf_info "maestro-grpc-endpoint cleared" ;;
         db-host)      rm -f "$HF_DB_HOST_FILE" && hf_info "db-host cleared" ;;
         db-port)      rm -f "$HF_DB_PORT_FILE" && hf_info "db-port cleared" ;;
         db-name)      rm -f "$HF_DB_NAME_FILE" && hf_info "db-name cleared" ;;
@@ -71,6 +83,7 @@ clear_config() {
             rm -f "$HF_API_URL_FILE" "$HF_API_VERSION_FILE" "$HF_TOKEN_FILE" \
                   "$HF_CONTEXT_FILE" "$HF_NAMESPACE_FILE" "$HF_GCP_PROJECT_FILE" \
                   "$HF_CLUSTER_ID_FILE" "$HF_CLUSTER_NAME_FILE" \
+                  "$HF_MAESTRO_CONSUMER_FILE" "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "$HF_MAESTRO_GRPC_ENDPOINT_FILE" \
                   "$HF_DB_HOST_FILE" "$HF_DB_PORT_FILE" "$HF_DB_NAME_FILE" \
                   "$HF_DB_USER_FILE" "$HF_DB_PASSWORD_FILE"
             hf_info "All config cleared"
@@ -93,6 +106,9 @@ case "${1:-show}" in
         echo ""
         echo "HyperFleet Keys:"
         echo "  api-url, api-version, token, context, namespace, gcp-project, cluster-id, cluster-name"
+        echo ""
+        echo "Maestro Keys:"
+        echo "  maestro-consumer, maestro-http-endpoint, maestro-grpc-endpoint"
         echo ""
         echo "Database Keys:"
         echo "  db-host, db-port, db-name, db-user, db-password"

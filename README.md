@@ -21,6 +21,8 @@ hf.config.sh clear all            # Reset everything
 
 **HyperFleet settings**: `api-url`, `api-version`, `token`, `context`, `namespace`, `gcp-project`, `cluster-id`, `cluster-name`
 
+**Maestro settings**: `maestro-consumer`, `maestro-http-endpoint`, `maestro-grpc-endpoint`
+
 **Database settings**: `db-host`, `db-port`, `db-name`, `db-user`, `db-password`
 
 Interactive database setup: `hf.db.config.sh`
@@ -60,13 +62,23 @@ Interactive database setup: `hf.db.config.sh`
 | `hf.kube.port.forward.sh` | Port forward to services/pods |
 | `hf.logs.sh` | Tail pod logs with context |
 
+### Maestro
+
+Maestro scripts require `maestro-cli` to be compiled and available on your `PATH` from [openshift-hyperfleet/maestro-cli](https://github.com/openshift-hyperfleet/maestro-cli).
+
+| Script | Description |
+|--------|-------------|
+| `hf.maestro.list.sh` | List maestro resources |
+| `hf.maestro.get.sh` | Get a maestro resource by name (interactive selection if no name given) |
+| `hf.maestro.delete.sh` | Delete a maestro resource by name (interactive selection if no name given) |
+| `hf.maestro.bundles.sh` | List maestro resource bundles |
+
 ### Other Utilities
 
 | Script | Description |
 |--------|-------------|
 | `hf.adapter.status.sh` | Check adapter status |
 | `hf.pubsub.publish.sh` | Publish messages to Pub/Sub |
-| `hf.maestro.list.sh` | List maestro resources |
 | `hf.lib.sh` | Shared library (logging, API helpers, config loaders) |
 
 ## Common Patterns
