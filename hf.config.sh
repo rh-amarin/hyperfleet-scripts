@@ -22,6 +22,16 @@ show_config() {
     echo "  maestro-consumer:       ${HF_MAESTRO_CONSUMER:-<not set>}"
     echo "  maestro-http-endpoint:  ${HF_MAESTRO_HTTP_ENDPOINT:-<not set>}"
     echo "  maestro-grpc-endpoint:  ${HF_MAESTRO_GRPC_ENDPOINT:-<not set>}"
+    echo "  maestro-namespace:      ${HF_MAESTRO_NAMESPACE:-<not set>}"
+    echo ""
+    echo ""
+    echo -e "${BOLD}Port Forward Configuration${NC}"
+    echo ""
+    echo "  pf-api-port:            ${HF_PF_API_PORT:-<not set>}"
+    echo "  pf-pg-port:             ${HF_PF_PG_PORT:-<not set>}"
+    echo "  pf-maestro-http-port:   ${HF_PF_MAESTRO_HTTP_PORT:-<not set>}"
+    echo "  pf-maestro-http-remote: ${HF_PF_MAESTRO_HTTP_REMOTE_PORT:-<not set>}"
+    echo "  pf-maestro-grpc-port:   ${HF_PF_MAESTRO_GRPC_PORT:-<not set>}"
     echo ""
     echo -e "${BOLD}Database Configuration${NC}"
     echo ""
@@ -49,6 +59,12 @@ set_config() {
         maestro-consumer)       hf_set_maestro_consumer "$value" ;;
         maestro-http-endpoint)  hf_set_maestro_http_endpoint "$value" ;;
         maestro-grpc-endpoint)  hf_set_maestro_grpc_endpoint "$value" ;;
+        maestro-namespace)      hf_set_maestro_namespace "$value" ;;
+        pf-api-port)            hf_set_pf_api_port "$value" ;;
+        pf-pg-port)             hf_set_pf_pg_port "$value" ;;
+        pf-maestro-http-port)   hf_set_pf_maestro_http_port "$value" ;;
+        pf-maestro-http-remote-port) hf_set_pf_maestro_http_remote_port "$value" ;;
+        pf-maestro-grpc-port)   hf_set_pf_maestro_grpc_port "$value" ;;
         db-host)      hf_set_db_host "$value" ;;
         db-port)      hf_set_db_port "$value" ;;
         db-name)      hf_set_db_name "$value" ;;
@@ -74,6 +90,12 @@ clear_config() {
         maestro-consumer)       rm -f "$HF_MAESTRO_CONSUMER_FILE" && hf_info "maestro-consumer cleared" ;;
         maestro-http-endpoint)  rm -f "$HF_MAESTRO_HTTP_ENDPOINT_FILE" && hf_info "maestro-http-endpoint cleared" ;;
         maestro-grpc-endpoint)  rm -f "$HF_MAESTRO_GRPC_ENDPOINT_FILE" && hf_info "maestro-grpc-endpoint cleared" ;;
+        maestro-namespace)      rm -f "$HF_MAESTRO_NAMESPACE_FILE" && hf_info "maestro-namespace cleared" ;;
+        pf-api-port)            rm -f "$HF_PF_API_PORT_FILE" && hf_info "pf-api-port cleared" ;;
+        pf-pg-port)             rm -f "$HF_PF_PG_PORT_FILE" && hf_info "pf-pg-port cleared" ;;
+        pf-maestro-http-port)   rm -f "$HF_PF_MAESTRO_HTTP_PORT_FILE" && hf_info "pf-maestro-http-port cleared" ;;
+        pf-maestro-http-remote-port) rm -f "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" && hf_info "pf-maestro-http-remote-port cleared" ;;
+        pf-maestro-grpc-port)   rm -f "$HF_PF_MAESTRO_GRPC_PORT_FILE" && hf_info "pf-maestro-grpc-port cleared" ;;
         db-host)      rm -f "$HF_DB_HOST_FILE" && hf_info "db-host cleared" ;;
         db-port)      rm -f "$HF_DB_PORT_FILE" && hf_info "db-port cleared" ;;
         db-name)      rm -f "$HF_DB_NAME_FILE" && hf_info "db-name cleared" ;;
@@ -84,6 +106,8 @@ clear_config() {
                   "$HF_CONTEXT_FILE" "$HF_NAMESPACE_FILE" "$HF_GCP_PROJECT_FILE" \
                   "$HF_CLUSTER_ID_FILE" "$HF_CLUSTER_NAME_FILE" \
                   "$HF_MAESTRO_CONSUMER_FILE" "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "$HF_MAESTRO_GRPC_ENDPOINT_FILE" \
+                  "$HF_MAESTRO_NAMESPACE_FILE" \
+                  "$HF_PF_API_PORT_FILE" "$HF_PF_PG_PORT_FILE" "$HF_PF_MAESTRO_HTTP_PORT_FILE" "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" "$HF_PF_MAESTRO_GRPC_PORT_FILE" \
                   "$HF_DB_HOST_FILE" "$HF_DB_PORT_FILE" "$HF_DB_NAME_FILE" \
                   "$HF_DB_USER_FILE" "$HF_DB_PASSWORD_FILE"
             hf_info "All config cleared"
@@ -108,7 +132,10 @@ case "${1:-show}" in
         echo "  api-url, api-version, token, context, namespace, gcp-project, cluster-id, cluster-name"
         echo ""
         echo "Maestro Keys:"
-        echo "  maestro-consumer, maestro-http-endpoint, maestro-grpc-endpoint"
+        echo "  maestro-consumer, maestro-http-endpoint, maestro-grpc-endpoint, maestro-namespace"
+        echo ""
+        echo "Port Forward Keys:"
+        echo "  pf-api-port, pf-pg-port, pf-maestro-http-port, pf-maestro-http-remote-port, pf-maestro-grpc-port"
         echo ""
         echo "Database Keys:"
         echo "  db-host, db-port, db-name, db-user, db-password"

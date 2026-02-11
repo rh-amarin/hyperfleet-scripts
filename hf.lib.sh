@@ -43,6 +43,12 @@ HF_DB_PASSWORD_FILE="$HF_CONFIG_DIR/db-password"
 HF_MAESTRO_CONSUMER_FILE="$HF_CONFIG_DIR/maestro-consumer"
 HF_MAESTRO_HTTP_ENDPOINT_FILE="$HF_CONFIG_DIR/maestro-http-endpoint"
 HF_MAESTRO_GRPC_ENDPOINT_FILE="$HF_CONFIG_DIR/maestro-grpc-endpoint"
+HF_MAESTRO_NAMESPACE_FILE="$HF_CONFIG_DIR/maestro-namespace"
+HF_PF_API_PORT_FILE="$HF_CONFIG_DIR/pf-api-port"
+HF_PF_PG_PORT_FILE="$HF_CONFIG_DIR/pf-pg-port"
+HF_PF_MAESTRO_HTTP_PORT_FILE="$HF_CONFIG_DIR/pf-maestro-http-port"
+HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE="$HF_CONFIG_DIR/pf-maestro-http-remote-port"
+HF_PF_MAESTRO_GRPC_PORT_FILE="$HF_CONFIG_DIR/pf-maestro-grpc-port"
 
 # Load config from files (env vars take precedence)
 _hf_load HF_API_URL "$HF_API_URL_FILE" "http://localhost:8000"
@@ -59,6 +65,12 @@ _hf_load HF_DB_PASSWORD "$HF_DB_PASSWORD_FILE" ""
 _hf_load HF_MAESTRO_CONSUMER "$HF_MAESTRO_CONSUMER_FILE" "cluster1"
 _hf_load HF_MAESTRO_HTTP_ENDPOINT "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "http://localhost:8100"
 _hf_load HF_MAESTRO_GRPC_ENDPOINT "$HF_MAESTRO_GRPC_ENDPOINT_FILE" "localhost:8090"
+_hf_load HF_MAESTRO_NAMESPACE "$HF_MAESTRO_NAMESPACE_FILE" "maestro-ns2"
+_hf_load HF_PF_API_PORT "$HF_PF_API_PORT_FILE" "8000"
+_hf_load HF_PF_PG_PORT "$HF_PF_PG_PORT_FILE" "5432"
+_hf_load HF_PF_MAESTRO_HTTP_PORT "$HF_PF_MAESTRO_HTTP_PORT_FILE" "8100"
+_hf_load HF_PF_MAESTRO_HTTP_REMOTE_PORT "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" "8000"
+_hf_load HF_PF_MAESTRO_GRPC_PORT "$HF_PF_MAESTRO_GRPC_PORT_FILE" "8090"
 
 # ============================================================================
 # Colors
@@ -160,6 +172,12 @@ hf_set_db_password() { _hf_set HF_DB_PASSWORD "$HF_DB_PASSWORD_FILE" "$1" "DB pa
 hf_set_maestro_consumer() { _hf_set HF_MAESTRO_CONSUMER "$HF_MAESTRO_CONSUMER_FILE" "$1" "Maestro consumer"; }
 hf_set_maestro_http_endpoint() { _hf_set HF_MAESTRO_HTTP_ENDPOINT "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "$1" "Maestro HTTP endpoint"; }
 hf_set_maestro_grpc_endpoint() { _hf_set HF_MAESTRO_GRPC_ENDPOINT "$HF_MAESTRO_GRPC_ENDPOINT_FILE" "$1" "Maestro gRPC endpoint"; }
+hf_set_maestro_namespace() { _hf_set HF_MAESTRO_NAMESPACE "$HF_MAESTRO_NAMESPACE_FILE" "$1" "Maestro namespace"; }
+hf_set_pf_api_port() { _hf_set HF_PF_API_PORT "$HF_PF_API_PORT_FILE" "$1" "Port-forward API port"; }
+hf_set_pf_pg_port() { _hf_set HF_PF_PG_PORT "$HF_PF_PG_PORT_FILE" "$1" "Port-forward PG port"; }
+hf_set_pf_maestro_http_port() { _hf_set HF_PF_MAESTRO_HTTP_PORT "$HF_PF_MAESTRO_HTTP_PORT_FILE" "$1" "Port-forward Maestro HTTP port"; }
+hf_set_pf_maestro_http_remote_port() { _hf_set HF_PF_MAESTRO_HTTP_REMOTE_PORT "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" "$1" "Port-forward Maestro HTTP remote port"; }
+hf_set_pf_maestro_grpc_port() { _hf_set HF_PF_MAESTRO_GRPC_PORT "$HF_PF_MAESTRO_GRPC_PORT_FILE" "$1" "Port-forward Maestro gRPC port"; }
 
 hf_clear_context() { _hf_clear HF_KUBE_CONTEXT "$HF_CONTEXT_FILE" "Context"; }
 hf_clear_namespace() { _hf_clear HF_KUBE_NAMESPACE "$HF_NAMESPACE_FILE" "Namespace"; }

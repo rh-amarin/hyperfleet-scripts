@@ -23,6 +23,8 @@ hf.config.sh clear all            # Reset everything
 
 **Maestro settings**: `maestro-consumer`, `maestro-http-endpoint`, `maestro-grpc-endpoint`
 
+**Port forward settings**: `pf-api-port`, `pf-pg-port`, `pf-maestro-http-port`, `pf-maestro-http-remote-port`, `pf-maestro-grpc-port`
+
 **Database settings**: `db-host`, `db-port`, `db-name`, `db-user`, `db-password`
 
 Interactive database setup: `hf.db.config.sh`
