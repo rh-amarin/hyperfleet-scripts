@@ -185,5 +185,7 @@ status) do_status ;;
   echo "  start   Start port forwards to hyperfleet pods"
   echo "  stop    Stop all running port forwards"
   echo "  status  Show status of port forwards"
+  echo ""
+  do_status
   ;;
 esac

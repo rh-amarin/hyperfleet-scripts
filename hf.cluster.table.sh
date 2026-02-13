@@ -26,14 +26,14 @@ hf_get "/clusters" | jq -r '
   # Build data rows
   ($items[] | . as $cluster |
     [.id, .name] + [$types[] as $t | ($cluster.status.conditions | map(select(.type == $t)) | .[0].status |
-      if . == "True" then "##GREEN##"
+      if . == "True" then "##GRN##"
       elif . == "False" then "##RED##"
-      elif . == "Unknown" then "##YELLOW##"
+      elif . == "Unknown" then "##YLW##"
       elif . == "" or . == null then "-"
       else . end)]
     | @tsv
   )
 ' | column -t -s $'\t' | sed \
-    -e "s/##GREEN##/${GREEN}●${RESET}/g" \
+    -e "s/##GRN##/${GREEN}●${RESET}/g" \
     -e "s/##RED##/${RED}●${RESET}/g" \
-    -e "s/##YELLOW##/${YELLOW}●${RESET}/g"
+    -e "s/##YLW##/${YELLOW}●${RESET}/g"
