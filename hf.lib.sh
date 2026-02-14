@@ -139,6 +139,30 @@ hf_set_cluster_name() {
 }
 
 # ============================================================================
+# NodePool ID Management
+# ============================================================================
+
+HF_NODEPOOL_ID_FILE="$HF_CONFIG_DIR/nodepool-id"
+
+# Get nodepool ID from argument, file, or fail
+hf_nodepool_id() {
+  local id="${1:-}"
+  if [[ -n "$id" ]]; then
+    echo "$id"
+  elif [[ -f "$HF_NODEPOOL_ID_FILE" ]]; then
+    cat "$HF_NODEPOOL_ID_FILE"
+  else
+    hf_die "No nodepool ID specified and none saved. Use hf.nodepool.list.sh to find one."
+  fi
+}
+
+# Save nodepool ID to file
+hf_set_nodepool_id() {
+  echo "$1" >"$HF_NODEPOOL_ID_FILE"
+  hf_info "Current nodepool set to: $1"
+}
+
+# ============================================================================
 # Config Setters
 # ============================================================================
 
@@ -283,6 +307,139 @@ hf_find_postgres_pod() {
   pod=$(hf_kubectl_ns get pods -o name 2>/dev/null | grep -i postgres | head -1 | sed 's|pod/||')
   [[ -z "$pod" ]] && hf_die "Could not find postgres pod in namespace $HF_KUBE_NAMESPACE"
   echo "$pod"
+}
+
+# ============================================================================
+# Config Property Registry
+# ============================================================================
+#
+# Single source of truth for all config properties.
+# Format: "section|key|default|flags"
+#   section  — grouping for display
+#   key      — config key (maps to file $HF_CONFIG_DIR/<key>)
+#   default  — default value (empty if none)
+#   flags    — "s" = sensitive (masked in output)
+#
+# To add a property: add one line here + a HF_*_FILE + _hf_load above.
+
+HF_CONFIG_REGISTRY=(
+  "hyperfleet|api-url|http://localhost:8000"
+  "hyperfleet|api-version|v1"
+  "hyperfleet|token||s"
+  "hyperfleet|context"
+  "hyperfleet|namespace"
+  "hyperfleet|gcp-project|hcm-hyperfleet"
+  "hyperfleet|cluster-id"
+  "hyperfleet|cluster-name"
+  "hyperfleet|nodepool-id"
+  "maestro|maestro-consumer|cluster1"
+  "maestro|maestro-http-endpoint|http://localhost:8100"
+  "maestro|maestro-grpc-endpoint|localhost:8090"
+  "maestro|maestro-namespace|maestro-ns2"
+  "portforward|pf-api-port|8000"
+  "portforward|pf-pg-port|5432"
+  "portforward|pf-maestro-http-port|8100"
+  "portforward|pf-maestro-http-remote-port|8000"
+  "portforward|pf-maestro-grpc-port|8090"
+  "database|db-host|localhost"
+  "database|db-port|5432"
+  "database|db-name"
+  "database|db-user"
+  "database|db-password||s"
+)
+
+# Parse a registry entry into _HF_E_* variables (no subshells)
+_hf_parse() {
+  local IFS='|'
+  # shellcheck disable=SC2034
+  read -r _HF_E_SECTION _HF_E_KEY _HF_E_DEFAULT _HF_E_FLAGS <<< "$1"
+}
+
+# Convenience accessors (use after _hf_parse, or accept entry as arg)
+hf_prop_section() { _hf_parse "$1"; echo "$_HF_E_SECTION"; }
+hf_prop_key()     { _hf_parse "$1"; echo "$_HF_E_KEY"; }
+hf_prop_default() { _hf_parse "$1"; echo "$_HF_E_DEFAULT"; }
+hf_prop_flags()   { _hf_parse "$1"; echo "$_HF_E_FLAGS"; }
+hf_prop_is_sensitive() { _hf_parse "$1"; [[ "$_HF_E_FLAGS" == *s* ]]; }
+
+# Get all registered keys as a flat list
+hf_config_keys() {
+  for entry in "${HF_CONFIG_REGISTRY[@]}"; do
+    _hf_parse "$entry"; echo "$_HF_E_KEY"
+  done
+}
+
+# Check if a key exists in the registry
+hf_config_has_key() {
+  local key="$1"
+  for entry in "${HF_CONFIG_REGISTRY[@]}"; do
+    _hf_parse "$entry"
+    [[ "$_HF_E_KEY" == "$key" ]] && return 0
+  done
+  return 1
+}
+
+# Get registry entry by key
+hf_config_entry() {
+  local key="$1"
+  for entry in "${HF_CONFIG_REGISTRY[@]}"; do
+    _hf_parse "$entry"
+    [[ "$_HF_E_KEY" == "$key" ]] && echo "$entry" && return 0
+  done
+  return 1
+}
+
+# Get the current value of a config key from its file, falling back to default
+hf_config_value() {
+  local file="$HF_CONFIG_DIR/$1"
+  if [[ -f "$file" ]]; then
+    cat "$file"
+  else
+    for entry in "${HF_CONFIG_REGISTRY[@]}"; do
+      _hf_parse "$entry"
+      if [[ "$_HF_E_KEY" == "$1" ]]; then
+        echo "$_HF_E_DEFAULT"
+        return 0
+      fi
+    done
+  fi
+}
+
+# Generic set by key name
+hf_config_set() {
+  local key="$1" value="$2"
+  hf_config_has_key "$key" || hf_die "Unknown config key: $key"
+  echo "$value" >"$HF_CONFIG_DIR/$key"
+  hf_info "$key set to: $value"
+}
+
+# Generic clear by key name
+hf_config_clear() {
+  local key="$1"
+  hf_config_has_key "$key" || hf_die "Unknown config key: $key"
+  rm -f "$HF_CONFIG_DIR/$key"
+  hf_info "$key cleared"
+}
+
+# ============================================================================
+# Config Requirement Declarations
+# ============================================================================
+
+# Declare and validate that a script requires specific config properties.
+# Usage: hf_require_config api-url cluster-id
+# Dies with a clear message if any required property has no value.
+hf_require_config() {
+  local missing=()
+  for key in "$@"; do
+    local value
+    value=$(hf_config_value "$key")
+    if [[ -z "$value" ]]; then
+      missing+=("$key")
+    fi
+  done
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    hf_die "Missing required config: ${missing[*]}. Run: hf.config.sh set <key> <value>"
+  fi
 }
 
 # ============================================================================

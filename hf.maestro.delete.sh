@@ -2,6 +2,7 @@
 # Delete a maestro resource by name, or interactively select one from the list
 # Usage: hf.maestro.delete.sh [name]
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config maestro-consumer maestro-http-endpoint maestro-grpc-endpoint
 
 SCRIPT_DIR="$(dirname "$(realpath "$0")")"
 

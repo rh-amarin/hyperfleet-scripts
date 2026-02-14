@@ -2,6 +2,7 @@
 # Publish cluster change message to Pub/Sub topic
 # Usage: hf.pubsub.publish.sh <topic>
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config gcp-project cluster-id
 
 TOPIC="${1:-}"
 [[ -z "$TOPIC" ]] && hf_die "Usage: hf.pubsub.publish.sh <topic>"

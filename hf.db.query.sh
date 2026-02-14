@@ -3,6 +3,7 @@
 # Usage: hf.db.query.sh <query>
 #        hf.db.query.sh -f <file.sql>
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config db-host db-port db-name db-user
 
 hf_require_psql
 

@@ -2,6 +2,7 @@
 # Port forward to hyperfleet pods
 # Usage: hf.kube.port.forward.sh start|stop|status
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config context namespace pf-api-port pf-pg-port pf-maestro-http-port pf-maestro-http-remote-port pf-maestro-grpc-port maestro-namespace
 
 API_LOCAL_PORT="$HF_PF_API_PORT"
 API_REMOTE_PORT="$HF_PF_API_PORT"

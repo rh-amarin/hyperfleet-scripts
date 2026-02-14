@@ -1,6 +1,7 @@
 #!/bin/bash
 # Show cluster conditions (use -w for watch mode)
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config api-url api-version cluster-id
 
 hf_require_jq
 CLUSTER_ID=$(hf_cluster_id)

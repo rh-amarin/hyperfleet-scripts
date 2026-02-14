@@ -2,6 +2,7 @@
 # Create a new cluster
 # Usage: hf.cluster.create.sh <name> [region] [version]
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config api-url api-version
 
 NAME="${1:-my-cluster}"
 REGION="${2:-us-east-1}"

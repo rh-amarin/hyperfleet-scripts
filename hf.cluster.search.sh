@@ -1,6 +1,7 @@
 #!/bin/bash
 # Search for cluster by name and set as current
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config api-url api-version
 
 # Get name from argument or saved file
 if [[ -n "${1:-}" ]]; then

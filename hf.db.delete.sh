@@ -2,6 +2,7 @@
 # Delete rows from PostgreSQL table
 # Usage: hf.db.delete.sh <table> [id]
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config db-host db-port db-name db-user
 
 hf_require_psql
 

@@ -1,6 +1,13 @@
 # HyperFleet Scripts
 
-CLI utilities for managing HyperFleet clusters, databases, and Kubernetes resources.
+CLI utilities for managing HyperFleet clusters, node pools, databases, and Kubernetes resources.
+
+## Quick Start
+
+```bash
+hf.config.sh bootstrap my-env    # Interactive setup: context, API, port-forwards, DB
+hf.config.sh doctor              # Check which scripts are ready to use
+```
 
 ## Config System
 
@@ -9,25 +16,42 @@ All scripts use a **file-based configuration** system with environment variable 
 - **Config location**: `~/.config/hf/` (one file per setting)
 - **Precedence**: Environment variables > config files > defaults
 - **Shared state**: Settings persist across script invocations
+- **Property registry**: All config keys are declared once in `HF_CONFIG_REGISTRY` in `hf.lib.sh`
+- **Dependency tracking**: Each script declares its required config via `hf_require_config`
 
 ### Managed via `hf.config.sh`
 
 ```bash
-hf.config.sh                      # Show current configuration
+hf.config.sh                      # Show help, environments, and active config
+hf.config.sh show                 # Show current configuration
+hf.config.sh show my-env          # Show config with environment overrides highlighted
 hf.config.sh set api-url <url>    # Set API URL
 hf.config.sh clear token          # Clear auth token
 hf.config.sh clear all            # Reset everything
+hf.config.sh doctor               # Check per-script readiness
+hf.config.sh bootstrap [env]      # Interactive environment setup
+hf.config.sh env list             # List environments
+hf.config.sh env activate <name>  # Activate an environment
 ```
 
-**HyperFleet settings**: `api-url`, `api-version`, `token`, `context`, `namespace`, `gcp-project`, `cluster-id`, `cluster-name`
+Settings are grouped into sections in the registry:
 
-**Maestro settings**: `maestro-consumer`, `maestro-http-endpoint`, `maestro-grpc-endpoint`
+**hyperfleet**: `api-url`, `api-version`, `token`, `context`, `namespace`, `gcp-project`, `cluster-id`, `cluster-name`, `nodepool-id`
 
-**Port forward settings**: `pf-api-port`, `pf-pg-port`, `pf-maestro-http-port`, `pf-maestro-http-remote-port`, `pf-maestro-grpc-port`
+**maestro**: `maestro-consumer`, `maestro-http-endpoint`, `maestro-grpc-endpoint`, `maestro-namespace`
 
-**Database settings**: `db-host`, `db-port`, `db-name`, `db-user`, `db-password`
+**portforward**: `pf-api-port`, `pf-pg-port`, `pf-maestro-http-port`, `pf-maestro-http-remote-port`, `pf-maestro-grpc-port`
 
-Interactive database setup: `hf.db.config.sh`
+**database**: `db-host`, `db-port`, `db-name`, `db-user`, `db-password`
+
+### Adding a new config property
+
+1. Add one line to `HF_CONFIG_REGISTRY` in `hf.lib.sh`
+2. Add a `HF_*_FILE` variable and `_hf_load` call in the same file
+3. Add a setter function if scripts need to set it programmatically
+4. Scripts that need it add the key to their `hf_require_config` call
+
+No other files need to change -- `hf.config.sh`, environments, and doctor all derive from the registry.
 
 ## Scripts Overview
 
@@ -42,8 +66,19 @@ Interactive database setup: `hf.db.config.sh`
 | `hf.cluster.list.sh` | List all clusters |
 | `hf.cluster.table.sh` | Display clusters in table format |
 | `hf.cluster.id.sh` | Show current cluster ID |
-| `hf.cluster.conditions.sh` | Show cluster conditions |
-| `hf.cluster.statuses.sh` | Show cluster status history |
+| `hf.cluster.conditions.sh` | Show cluster conditions (`-w` for watch) |
+| `hf.cluster.statuses.sh` | Show cluster adapter statuses (`-w` for watch) |
+
+### NodePool Management
+
+| Script | Description |
+|--------|-------------|
+| `hf.nodepool.create.sh` | Create a node pool under the current cluster |
+| `hf.nodepool.delete.sh` | Delete a node pool |
+| `hf.nodepool.get.sh` | Get node pool details |
+| `hf.nodepool.list.sh` | List node pools for the current cluster |
+| `hf.nodepool.conditions.sh` | Show node pool conditions (`-w` for watch) |
+| `hf.nodepool.statuses.sh` | Show node pool adapter statuses (`-w` for watch) |
 
 ### Database Operations
 
@@ -79,11 +114,21 @@ Maestro scripts require `maestro-cli` to be compiled and available on your `PATH
 
 | Script | Description |
 |--------|-------------|
-| `hf.adapter.status.sh` | Check adapter status |
+| `hf.adapter.status.sh` | Post adapter status for current cluster |
 | `hf.pubsub.publish.sh` | Publish messages to Pub/Sub |
-| `hf.lib.sh` | Shared library (logging, API helpers, config loaders) |
+| `hf.lib.sh` | Shared library (config registry, API helpers, logging, Kubernetes wrappers) |
 
 ## Common Patterns
+
+**Bootstrap a new environment**:
+```bash
+hf.config.sh bootstrap dev
+```
+
+**Check what's ready**:
+```bash
+hf.config.sh doctor
+```
 
 **Search and set current cluster**:
 ```bash
@@ -93,6 +138,19 @@ hf.cluster.search.sh my-cluster-name
 **Query cluster details** (uses saved cluster-id):
 ```bash
 hf.cluster.get.sh
+```
+
+**Create and manage node pools**:
+```bash
+hf.nodepool.create.sh my-pool 3 m5.2xlarge
+hf.nodepool.list.sh
+hf.nodepool.conditions.sh -w
+```
+
+**Switch environments**:
+```bash
+hf.config.sh env list
+hf.config.sh env activate staging
 ```
 
 **Configure kubectl context**:
@@ -108,7 +166,10 @@ hf.db.query.sh -f schema.sql
 
 ## Architecture
 
-- **hf.lib.sh**: Core library providing config loading, API helpers, logging, and Kubernetes wrappers
+- **hf.lib.sh**: Core library providing config registry, config loading, API helpers, logging, and Kubernetes wrappers
+- **Config registry**: `HF_CONFIG_REGISTRY` in `hf.lib.sh` is the single source of truth for all config properties (section, key, default, sensitivity)
+- **Dependency declarations**: Each script declares `hf_require_config <keys>` -- used at runtime for validation and by `doctor` for readiness scanning
 - **File-based state**: Each config value stored separately in `~/.config/hf/` for easy inspection and editing
+- **Environment profiles**: Named environments stored as `<env>.<property>` files in the config directory
 - **Environment override**: Set `HF_API_URL`, `HF_TOKEN`, etc. to override file config
 - **Consistent interface**: All scripts source `hf.lib.sh` for unified behavior and error handling

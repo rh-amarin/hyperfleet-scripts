@@ -2,6 +2,7 @@
 # Configure PostgreSQL database connection parameters
 # Usage: hf.db.config.sh
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config db-host db-port
 
 echo -e "${BOLD}Configure PostgreSQL Connection${NC}"
 echo ""

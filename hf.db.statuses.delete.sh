@@ -1,6 +1,7 @@
 #!/bin/bash
 # Delete adapter statuses from PostgreSQL
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config context namespace cluster-id
 
 CLUSTER_ID=$(hf_cluster_id)
 POD=$(hf_find_postgres_pod)

@@ -2,6 +2,7 @@
 # Post adapter status for current cluster
 # Usage: hf.adapter.status.sh <adapter_name> <available> [generation]
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
+hf_require_config api-url api-version cluster-id
 
 ADAPTER_NAME="${1:-}"
 AVAILABLE="${2:-}"

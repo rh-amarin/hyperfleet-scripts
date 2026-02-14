@@ -1,145 +1,450 @@
 #!/bin/bash
-# Show or set HyperFleet configuration
-# Usage: hf.config.sh [show|set|clear] [key] [value]
+# Central HyperFleet configuration management
+# Usage: hf.config.sh [show|set|clear|doctor|bootstrap|env] [args...]
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
 
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+ENV_LIST_FILE="$HF_CONFIG_DIR/environment-list"
+ENV_ACTIVE_FILE="$HF_CONFIG_DIR/environment-active"
+
+# Derive flat property list from registry (used by env activate/count)
+_CONFIG_KEYS=()
+for _entry in "${HF_CONFIG_REGISTRY[@]}"; do
+    _hf_parse "$_entry"
+    _CONFIG_KEYS+=("$_HF_E_KEY")
+done
+
+# ============================================================================
+# Environment helpers
+# ============================================================================
+
+_env_exists() {
+    [[ -f "$ENV_LIST_FILE" ]] && grep -qx "$1" "$ENV_LIST_FILE" 2>/dev/null
+}
+
+_get_active_env() {
+    [[ -f "$ENV_ACTIVE_FILE" ]] && cat "$ENV_ACTIVE_FILE"
+}
+
+_get_env_prop_count() {
+    local env="$1" count=0
+    for key in "${_CONFIG_KEYS[@]}"; do
+        [[ -f "$HF_CONFIG_DIR/$env.$key" ]] && ((count++))
+    done
+    echo "$count"
+}
+
+# ============================================================================
+# show — unified display, optional env-name for override view
+# ============================================================================
+
 show_config() {
+    local env_name="${1:-}"
+    local active
+    active=$(_get_active_env)
+
     echo -e "${BOLD}HyperFleet Configuration${NC}"
     echo ""
     echo "  Config dir: $HF_CONFIG_DIR"
+    if [[ -n "$env_name" ]]; then
+        _env_exists "$env_name" || hf_die "Environment '$env_name' not found in $ENV_LIST_FILE"
+        echo -e "  Environment: ${CYAN}$env_name${NC}"
+    fi
+    [[ -n "$active" ]] && echo -e "  Active: ${GREEN}$active${NC}"
     echo ""
-    echo "  api-url:      ${HF_API_URL:-<not set>}"
-    echo "  api-version:  ${HF_API_VERSION:-<not set>}"
-    echo "  token:        ${HF_TOKEN:+<set>}${HF_TOKEN:-<not set>}"
-    echo "  context:      ${HF_KUBE_CONTEXT:-<not set>}"
-    echo "  namespace:    ${HF_KUBE_NAMESPACE:-<not set>}"
-    echo "  gcp-project:  ${HF_GCP_PROJECT:-<not set>}"
-    echo "  cluster-id:   $(cat "$HF_CLUSTER_ID_FILE" 2>/dev/null || echo '<not set>')"
-    echo "  cluster-name: $(cat "$HF_CLUSTER_NAME_FILE" 2>/dev/null || echo '<not set>')"
+
+    local current_section=""
+    for entry in "${HF_CONFIG_REGISTRY[@]}"; do
+        _hf_parse "$entry"
+        local key="$_HF_E_KEY"
+        local value="" suffix=""
+
+        # Environment override takes priority when viewing an env
+        if [[ -n "$env_name" ]] && [[ -f "$HF_CONFIG_DIR/$env_name.$key" ]]; then
+            value=$(<"$HF_CONFIG_DIR/$env_name.$key")
+            suffix="  \033[0;36m[$env_name]\033[0m"
+        elif [[ -f "$HF_CONFIG_DIR/$key" ]]; then
+            value=$(<"$HF_CONFIG_DIR/$key")
+        else
+            value="$_HF_E_DEFAULT"
+        fi
+
+        # Section header on change
+        if [[ "$_HF_E_SECTION" != "$current_section" ]]; then
+            [[ -n "$current_section" ]] && echo ""
+            echo -e "${BOLD}${_HF_E_SECTION}${NC}"
+            current_section="$_HF_E_SECTION"
+        fi
+
+        # Display value (mask sensitive)
+        if [[ "$_HF_E_FLAGS" == *s* ]]; then
+            local display
+            if [[ -n "$value" ]]; then display="<set>"; else display="<not set>"; fi
+            printf "  %-35s %s" "$key" "$display"
+        else
+            printf "  %-35s %s" "$key" "${value:-<not set>}"
+        fi
+        [[ -n "$suffix" ]] && printf "%b" "$suffix"
+        printf "\n"
+    done
     echo ""
-    echo -e "${BOLD}Maestro Configuration${NC}"
-    echo ""
-    echo "  maestro-consumer:       ${HF_MAESTRO_CONSUMER:-<not set>}"
-    echo "  maestro-http-endpoint:  ${HF_MAESTRO_HTTP_ENDPOINT:-<not set>}"
-    echo "  maestro-grpc-endpoint:  ${HF_MAESTRO_GRPC_ENDPOINT:-<not set>}"
-    echo "  maestro-namespace:      ${HF_MAESTRO_NAMESPACE:-<not set>}"
-    echo ""
-    echo ""
-    echo -e "${BOLD}Port Forward Configuration${NC}"
-    echo ""
-    echo "  pf-api-port:            ${HF_PF_API_PORT:-<not set>}"
-    echo "  pf-pg-port:             ${HF_PF_PG_PORT:-<not set>}"
-    echo "  pf-maestro-http-port:   ${HF_PF_MAESTRO_HTTP_PORT:-<not set>}"
-    echo "  pf-maestro-http-remote: ${HF_PF_MAESTRO_HTTP_REMOTE_PORT:-<not set>}"
-    echo "  pf-maestro-grpc-port:   ${HF_PF_MAESTRO_GRPC_PORT:-<not set>}"
-    echo ""
-    echo -e "${BOLD}Database Configuration${NC}"
-    echo ""
-    echo "  db-host:      ${HF_DB_HOST:-<not set>}"
-    echo "  db-port:      ${HF_DB_PORT:-<not set>}"
-    echo "  db-name:      ${HF_DB_NAME:-<not set>}"
-    echo "  db-user:      ${HF_DB_USER:-<not set>}"
-    echo "  db-password:  ${HF_DB_PASSWORD:+<set>}${HF_DB_PASSWORD:-<not set>}"
 }
+
+# ============================================================================
+# set / clear — generic, validated by registry
+# ============================================================================
 
 set_config() {
     local key="$1" value="$2"
     [[ -z "$key" ]] && hf_die "Usage: hf.config.sh set <key> <value>"
     [[ -z "$value" ]] && hf_die "Usage: hf.config.sh set <key> <value>"
-
-    case "$key" in
-        api-url)      hf_set_api_url "$value" ;;
-        api-version)  hf_set_api_version "$value" ;;
-        token)        hf_set_token "$value" ;;
-        context)      hf_set_context "$value" ;;
-        namespace)    hf_set_namespace "$value" ;;
-        gcp-project)  hf_set_gcp_project "$value" ;;
-        cluster-id)   hf_set_cluster_id "$value" ;;
-        cluster-name) hf_set_cluster_name "$value" ;;
-        maestro-consumer)       hf_set_maestro_consumer "$value" ;;
-        maestro-http-endpoint)  hf_set_maestro_http_endpoint "$value" ;;
-        maestro-grpc-endpoint)  hf_set_maestro_grpc_endpoint "$value" ;;
-        maestro-namespace)      hf_set_maestro_namespace "$value" ;;
-        pf-api-port)            hf_set_pf_api_port "$value" ;;
-        pf-pg-port)             hf_set_pf_pg_port "$value" ;;
-        pf-maestro-http-port)   hf_set_pf_maestro_http_port "$value" ;;
-        pf-maestro-http-remote-port) hf_set_pf_maestro_http_remote_port "$value" ;;
-        pf-maestro-grpc-port)   hf_set_pf_maestro_grpc_port "$value" ;;
-        db-host)      hf_set_db_host "$value" ;;
-        db-port)      hf_set_db_port "$value" ;;
-        db-name)      hf_set_db_name "$value" ;;
-        db-user)      hf_set_db_user "$value" ;;
-        db-password)  hf_set_db_password "$value" ;;
-        *)            hf_die "Unknown config key: $key" ;;
-    esac
+    hf_config_set "$key" "$value"
 }
 
 clear_config() {
     local key="$1"
     [[ -z "$key" ]] && hf_die "Usage: hf.config.sh clear <key>"
 
-    case "$key" in
-        api-url)      rm -f "$HF_API_URL_FILE" && hf_info "api-url cleared" ;;
-        api-version)  rm -f "$HF_API_VERSION_FILE" && hf_info "api-version cleared" ;;
-        token)        rm -f "$HF_TOKEN_FILE" && hf_info "token cleared" ;;
-        context)      hf_clear_context ;;
-        namespace)    hf_clear_namespace ;;
-        gcp-project)  rm -f "$HF_GCP_PROJECT_FILE" && hf_info "gcp-project cleared" ;;
-        cluster-id)   rm -f "$HF_CLUSTER_ID_FILE" && hf_info "cluster-id cleared" ;;
-        cluster-name) rm -f "$HF_CLUSTER_NAME_FILE" && hf_info "cluster-name cleared" ;;
-        maestro-consumer)       rm -f "$HF_MAESTRO_CONSUMER_FILE" && hf_info "maestro-consumer cleared" ;;
-        maestro-http-endpoint)  rm -f "$HF_MAESTRO_HTTP_ENDPOINT_FILE" && hf_info "maestro-http-endpoint cleared" ;;
-        maestro-grpc-endpoint)  rm -f "$HF_MAESTRO_GRPC_ENDPOINT_FILE" && hf_info "maestro-grpc-endpoint cleared" ;;
-        maestro-namespace)      rm -f "$HF_MAESTRO_NAMESPACE_FILE" && hf_info "maestro-namespace cleared" ;;
-        pf-api-port)            rm -f "$HF_PF_API_PORT_FILE" && hf_info "pf-api-port cleared" ;;
-        pf-pg-port)             rm -f "$HF_PF_PG_PORT_FILE" && hf_info "pf-pg-port cleared" ;;
-        pf-maestro-http-port)   rm -f "$HF_PF_MAESTRO_HTTP_PORT_FILE" && hf_info "pf-maestro-http-port cleared" ;;
-        pf-maestro-http-remote-port) rm -f "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" && hf_info "pf-maestro-http-remote-port cleared" ;;
-        pf-maestro-grpc-port)   rm -f "$HF_PF_MAESTRO_GRPC_PORT_FILE" && hf_info "pf-maestro-grpc-port cleared" ;;
-        db-host)      rm -f "$HF_DB_HOST_FILE" && hf_info "db-host cleared" ;;
-        db-port)      rm -f "$HF_DB_PORT_FILE" && hf_info "db-port cleared" ;;
-        db-name)      rm -f "$HF_DB_NAME_FILE" && hf_info "db-name cleared" ;;
-        db-user)      rm -f "$HF_DB_USER_FILE" && hf_info "db-user cleared" ;;
-        db-password)  rm -f "$HF_DB_PASSWORD_FILE" && hf_info "db-password cleared" ;;
-        all)
-            rm -f "$HF_API_URL_FILE" "$HF_API_VERSION_FILE" "$HF_TOKEN_FILE" \
-                  "$HF_CONTEXT_FILE" "$HF_NAMESPACE_FILE" "$HF_GCP_PROJECT_FILE" \
-                  "$HF_CLUSTER_ID_FILE" "$HF_CLUSTER_NAME_FILE" \
-                  "$HF_MAESTRO_CONSUMER_FILE" "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "$HF_MAESTRO_GRPC_ENDPOINT_FILE" \
-                  "$HF_MAESTRO_NAMESPACE_FILE" \
-                  "$HF_PF_API_PORT_FILE" "$HF_PF_PG_PORT_FILE" "$HF_PF_MAESTRO_HTTP_PORT_FILE" "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" "$HF_PF_MAESTRO_GRPC_PORT_FILE" \
-                  "$HF_DB_HOST_FILE" "$HF_DB_PORT_FILE" "$HF_DB_NAME_FILE" \
-                  "$HF_DB_USER_FILE" "$HF_DB_PASSWORD_FILE"
-            hf_info "All config cleared"
+    if [[ "$key" == "all" ]]; then
+        for entry in "${HF_CONFIG_REGISTRY[@]}"; do
+            _hf_parse "$entry"
+            rm -f "$HF_CONFIG_DIR/$_HF_E_KEY"
+        done
+        hf_info "All config cleared"
+    else
+        hf_config_clear "$key"
+    fi
+}
+
+# ============================================================================
+# doctor — scan scripts for hf_require_config and report readiness
+# ============================================================================
+
+do_doctor() {
+    echo -e "${BOLD}Config Doctor${NC}"
+    echo ""
+
+    local total=0 ready=0 missing_count=0
+
+    for script in "$SCRIPT_DIR"/hf.*.sh; do
+        [[ "$script" == *hf.lib.sh ]] && continue
+        [[ "$script" == *hf.config.sh ]] && continue
+        [[ "$script" == *hf.conf.env.sh ]] && continue
+
+        local requires
+        requires=$(sed -n 's/^hf_require_config //p' "$script" 2>/dev/null | head -1)
+        [[ -z "$requires" ]] && continue
+
+        ((total++))
+        local script_name missing_keys
+        script_name=$(basename "$script")
+        missing_keys=()
+
+        for key in $requires; do
+            local value=""
+            if [[ -f "$HF_CONFIG_DIR/$key" ]]; then
+                value=$(<"$HF_CONFIG_DIR/$key")
+            else
+                for _e in "${HF_CONFIG_REGISTRY[@]}"; do
+                    _hf_parse "$_e"
+                    if [[ "$_HF_E_KEY" == "$key" ]]; then
+                        value="$_HF_E_DEFAULT"
+                        break
+                    fi
+                done
+            fi
+            [[ -z "$value" ]] && missing_keys+=("$key")
+        done
+
+        if [[ ${#missing_keys[@]} -eq 0 ]]; then
+            echo -e "  ${GREEN}●${NC} $script_name"
+            ((ready++))
+        else
+            echo -e "  ${RED}●${NC} $script_name — missing: ${missing_keys[*]}"
+            ((missing_count++))
+        fi
+    done
+
+    echo ""
+    echo -e "  ${BOLD}$ready${NC}/$total scripts ready"
+
+    if [[ $missing_count -gt 0 ]]; then
+        echo ""
+        echo "Fix with: hf.config.sh set <key> <value>"
+    fi
+}
+
+# ============================================================================
+# bootstrap — interactive one-command environment setup
+# ============================================================================
+
+do_bootstrap() {
+    local env_name="${1:-}"
+
+    echo -e "${BOLD}HyperFleet Environment Bootstrap${NC}"
+    echo ""
+
+    # Step 1: Environment name
+    if [[ -z "$env_name" ]]; then
+        read -rp "Environment name: " env_name
+        [[ -z "$env_name" ]] && hf_die "Environment name is required"
+    fi
+
+    hf_info "Setting up environment: $env_name"
+    echo ""
+
+    # Step 2: Kubernetes context + namespace
+    echo -e "${BOLD}Step 1: Kubernetes Context & Namespace${NC}"
+    echo ""
+    if command -v kubectl &>/dev/null; then
+        "$SCRIPT_DIR/hf.kube.context.sh" select
+        echo ""
+    else
+        hf_warn "kubectl not found — skipping context/namespace selection"
+        echo ""
+    fi
+
+    # Step 3: API URL
+    echo -e "${BOLD}Step 2: API Configuration${NC}"
+    echo ""
+    read -rp "API URL [${HF_API_URL:-http://localhost:8000}]: " api_url
+    api_url="${api_url:-${HF_API_URL:-http://localhost:8000}}"
+    hf_config_set api-url "$api_url"
+    echo ""
+
+    # Step 4: Port forwards
+    echo -e "${BOLD}Step 3: Port Forwards${NC}"
+    echo ""
+    if command -v kubectl &>/dev/null && [[ -n "$(hf_config_value context)" ]]; then
+        read -rp "Start port forwards now? [Y/n] " start_pf
+        if [[ ! "$start_pf" =~ ^[nN] ]]; then
+            "$SCRIPT_DIR/hf.kube.port.forward.sh" start
+        else
+            hf_info "Skipping port forwards"
+        fi
+    else
+        hf_warn "No kubectl or context — skipping port forwards"
+    fi
+    echo ""
+
+    # Step 5: Database configuration
+    echo -e "${BOLD}Step 4: Database Configuration${NC}"
+    echo ""
+    read -rp "Configure database connection? [Y/n] " config_db
+    if [[ ! "$config_db" =~ ^[nN] ]]; then
+        "$SCRIPT_DIR/hf.db.config.sh"
+    else
+        hf_info "Skipping database configuration"
+    fi
+    echo ""
+
+    # Step 6: Test API connectivity
+    echo -e "${BOLD}Step 5: Testing API Connectivity${NC}"
+    echo ""
+    hf_info "Testing connection to $(hf_config_value api-url) ..."
+    local http_code
+    http_code=$(curl -s -o /dev/null -w "%{http_code}" --http1.1 "$(hf_api_base)/clusters" 2>/dev/null)
+    if [[ "$http_code" =~ ^2 ]]; then
+        hf_info "API is reachable (HTTP $http_code)"
+    elif [[ "$http_code" == "000" ]]; then
+        hf_warn "API is not reachable — connection refused or timeout"
+    else
+        hf_warn "API returned HTTP $http_code"
+    fi
+    echo ""
+
+    # Step 7: Save environment profile
+    echo -e "${BOLD}Step 6: Saving Environment Profile${NC}"
+    echo ""
+    local saved=0
+    for entry in "${HF_CONFIG_REGISTRY[@]}"; do
+        _hf_parse "$entry"
+        # Skip token from environment profiles (security)
+        [[ "$_HF_E_KEY" == "token" ]] && continue
+        local src_file="$HF_CONFIG_DIR/$_HF_E_KEY"
+        if [[ -f "$src_file" ]]; then
+            cp "$src_file" "$HF_CONFIG_DIR/$env_name.$_HF_E_KEY"
+            ((saved++))
+        fi
+    done
+    hf_info "Saved $saved properties to environment '$env_name'"
+
+    # Step 8: Register and activate
+    if ! grep -qx "$env_name" "$ENV_LIST_FILE" 2>/dev/null; then
+        echo "$env_name" >>"$ENV_LIST_FILE"
+        hf_info "Registered environment '$env_name'"
+    fi
+    echo "$env_name" >"$ENV_ACTIVE_FILE"
+    hf_info "Activated environment '$env_name'"
+    echo ""
+
+    # Step 9: Doctor report as summary
+    do_doctor
+    echo ""
+    echo "Manage environments with:"
+    echo "  hf.config.sh env list              — list environments"
+    echo "  hf.config.sh env show $env_name    — show this environment"
+    echo "  hf.config.sh env activate $env_name — re-activate"
+}
+
+# ============================================================================
+# env list — list environments with property counts
+# ============================================================================
+
+do_env_list() {
+    if [[ ! -f "$ENV_LIST_FILE" ]] || [[ ! -s "$ENV_LIST_FILE" ]]; then
+        hf_info "No environments configured"
+        return 0
+    fi
+
+    local active
+    active=$(_get_active_env)
+
+    echo -e "${BOLD}Environments${NC}"
+    echo ""
+
+    while IFS= read -r env; do
+        [[ -z "$env" ]] && continue
+        local count marker="○" suffix=""
+        count=$(_get_env_prop_count "$env")
+        if [[ "$env" == "$active" ]]; then
+            marker="${GREEN}●${NC}"
+            suffix=" (active)"
+        fi
+        printf "  %b %-30s %s properties%s\n" "$marker" "$env" "$count" "$suffix"
+    done <"$ENV_LIST_FILE"
+}
+
+# ============================================================================
+# env activate — activate an environment
+# ============================================================================
+
+do_env_activate() {
+    local name="$1"
+    [[ -z "$name" ]] && hf_die "Usage: hf.config.sh env activate <name>"
+    _env_exists "$name" || hf_die "Environment '$name' not found in $ENV_LIST_FILE"
+
+    # Collect properties that will be overridden
+    local -a override_props=()
+    for key in "${_CONFIG_KEYS[@]}"; do
+        [[ -f "$HF_CONFIG_DIR/$name.$key" ]] && override_props+=("$key")
+    done
+
+    if [[ ${#override_props[@]} -eq 0 ]]; then
+        hf_warn "Environment '$name' has no properties defined — nothing to activate"
+        return 0
+    fi
+
+    # Display what will be overridden
+    echo -e "${BOLD}Activating environment: $name${NC}"
+    echo ""
+    echo "The following config properties will be overridden:"
+    echo ""
+
+    for key in "${override_props[@]}"; do
+        local new_value current_value=""
+        new_value=$(<"$HF_CONFIG_DIR/$name.$key")
+        [[ -f "$HF_CONFIG_DIR/$key" ]] && current_value=$(<"$HF_CONFIG_DIR/$key")
+
+        # Check sensitivity via registry
+        local sensitive=false
+        for _e in "${HF_CONFIG_REGISTRY[@]}"; do
+            _hf_parse "$_e"
+            if [[ "$_HF_E_KEY" == "$key" ]]; then
+                [[ "$_HF_E_FLAGS" == *s* ]] && sensitive=true
+                break
+            fi
+        done
+
+        if [[ "$sensitive" == true ]]; then
+            printf "  %-35s %s -> %s\n" "$key" "${current_value:+<set>}${current_value:-<not set>}" "<set>"
+        else
+            printf "  %-35s %s -> %s\n" "$key" "${current_value:-<not set>}" "$new_value"
+        fi
+    done
+
+    echo ""
+    read -rp "Proceed with activation? [y/N] " confirm
+    if [[ ! "$confirm" =~ ^[yY] ]]; then
+        hf_info "Cancelled"
+        return 0
+    fi
+
+    echo ""
+
+    # Copy environment properties to active config
+    for key in "${override_props[@]}"; do
+        cp "$HF_CONFIG_DIR/$name.$key" "$HF_CONFIG_DIR/$key"
+        hf_info "Set $key"
+    done
+
+    # Record the active environment
+    echo "$name" >"$ENV_ACTIVE_FILE"
+
+    echo ""
+    hf_info "Environment '$name' is now active"
+}
+
+# ============================================================================
+# env — dispatch env subcommands
+# ============================================================================
+
+do_env() {
+    case "${1:-list}" in
+        list)     do_env_list ;;
+        show)     show_config "${2:-}" ;;
+        activate) do_env_activate "${2:-}" ;;
+        *)
+            hf_usage "env [list|show|activate] [args...]"
+            echo "Commands:"
+            echo "  list                  List environments with property counts"
+            echo "  show [name]           Show config values (with env overrides if specified)"
+            echo "  activate <name>       Activate an environment"
             ;;
-        *)            hf_die "Unknown config key: $key" ;;
     esac
 }
 
-case "${1:-show}" in
-    show)   show_config ;;
-    set)    set_config "${2:-}" "${3:-}" ;;
-    clear)  clear_config "${2:-}" ;;
-    *)
-        hf_usage "[show|set|clear]"
-        echo "Commands:"
-        echo "  show                Show current configuration"
-        echo "  set <key> <value>   Set a configuration value"
-        echo "  clear <key>         Clear a configuration value"
-        echo "  clear all           Clear all configuration"
+# ============================================================================
+# help
+# ============================================================================
+
+show_help() {
+    hf_usage "[show|set|clear|doctor|bootstrap|env] [args...]"
+    echo "Commands:"
+    echo "  show [env-name]         Show current configuration"
+    echo "  set <key> <value>       Set a configuration value"
+    echo "  clear <key>             Clear a configuration value"
+    echo "  clear all               Clear all configuration"
+    echo "  doctor                  Check which scripts are ready to use"
+    echo "  bootstrap [env-name]    Interactive environment setup"
+    echo "  env list                List environments"
+    echo "  env show [name]         Show config with environment overrides"
+    echo "  env activate <name>     Activate an environment"
+    echo ""
+
+    # Show environments
+    if [[ -f "$ENV_LIST_FILE" ]] && [[ -s "$ENV_LIST_FILE" ]]; then
+        do_env_list
         echo ""
-        echo "HyperFleet Keys:"
-        echo "  api-url, api-version, token, context, namespace, gcp-project, cluster-id, cluster-name"
-        echo ""
-        echo "Maestro Keys:"
-        echo "  maestro-consumer, maestro-http-endpoint, maestro-grpc-endpoint, maestro-namespace"
-        echo ""
-        echo "Port Forward Keys:"
-        echo "  pf-api-port, pf-pg-port, pf-maestro-http-port, pf-maestro-http-remote-port, pf-maestro-grpc-port"
-        echo ""
-        echo "Database Keys:"
-        echo "  db-host, db-port, db-name, db-user, db-password"
-        echo ""
-        echo "Note: For interactive database configuration, use hf.db.config.sh"
-        ;;
+    fi
+
+    # Show config for the active environment
+    local active
+    active=$(_get_active_env)
+    show_config "$active"
+}
+
+# ============================================================================
+# Main
+# ============================================================================
+
+case "${1:-}" in
+    "")        show_help ;;
+    show)      show_config "${2:-}" ;;
+    set)       set_config "${2:-}" "${3:-}" ;;
+    clear)     clear_config "${2:-}" ;;
+    doctor)    do_doctor ;;
+    bootstrap) do_bootstrap "${2:-}" ;;
+    env)       do_env "${2:-}" "${3:-}" ;;
+    *)         show_help ;;
 esac
