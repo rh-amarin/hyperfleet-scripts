@@ -95,9 +95,48 @@ No other files need to change -- `hf.config.sh`, environments, and doctor all de
 | Script | Description |
 |--------|-------------|
 | `hf.kube.context.sh` | Select and save kubectl context/namespace |
-| `hf.kube.debug.pod.sh` | Create debug pod in cluster |
+| `hf.kube.curl.sh` | Run curl from inside a cluster pod (see below) |
+| `hf.kube.debug.pod.sh` | Create debug pod cloned from a deployment (see below) |
 | `hf.kube.port.forward.sh` | Port forward to services/pods |
 | `hf.logs.sh` | Tail pod logs with context |
+
+#### `hf.kube.curl.sh`
+
+Runs curl from inside a pod in the current Kubernetes cluster, useful for reaching cluster-internal services. The pod (`hf-kcurl`) is reused across invocations and auto-terminates after 5 minutes via `sleep 300`, so the first call pays the pod startup cost but subsequent calls are fast. Only curl output is written to stdout, making the script safe to use in pipelines and other scripts.
+
+```bash
+# Simple GET
+hf.kube.curl.sh http://my-service.ns.svc:8080/health
+
+# POST with inline data
+hf.kube.curl.sh -X POST -H "Content-Type: application/json" -d '{"key":"val"}' http://my-service.ns.svc:8080/api
+
+# POST with file body
+hf.kube.curl.sh -X POST -H "Content-Type: application/json" -f payload.json http://my-service.ns.svc:8080/api
+
+# Save response to file
+hf.kube.curl.sh -o response.json http://my-service.ns.svc:8080/api
+
+# Use in a pipeline
+hf.kube.curl.sh http://my-service.ns.svc:8080/api | jq '.items[]'
+```
+
+#### `hf.kube.debug.pod.sh`
+
+Creates a debug pod by cloning the pod template from an existing deployment. The debug pod runs with the same image, environment variables, volumes, and service account as the original deployment, but replaces the entrypoint with `sleep infinity` and removes all health probes. This lets you exec into a shell with the exact same runtime context as the target workload — useful for debugging configuration, network connectivity, or permissions issues.
+
+The deployment is matched by partial name, so you don't need to type the full name.
+
+```bash
+# Clone a deployment's pod template into a debug pod and exec into it
+hf.kube.debug.pod.sh my-app
+
+# Specify a namespace
+hf.kube.debug.pod.sh my-app staging
+
+# Clean up when done
+kubectl delete pod my-app-debug-<timestamp> -n default
+```
 
 ### Maestro
 
