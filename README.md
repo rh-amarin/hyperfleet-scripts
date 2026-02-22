@@ -77,6 +77,7 @@ No other files need to change -- `hf.config.sh`, environments, and doctor all de
 | `hf.nodepool.delete.sh` | Delete a node pool |
 | `hf.nodepool.get.sh` | Get node pool details |
 | `hf.nodepool.list.sh` | List node pools for the current cluster |
+| `hf.nodepool.table.sh` | Display node pools in table format |
 | `hf.nodepool.conditions.sh` | Show node pool conditions (`-w` for watch) |
 | `hf.nodepool.statuses.sh` | Show node pool adapter statuses (`-w` for watch) |
 
@@ -145,7 +146,7 @@ Maestro scripts require `maestro-cli` to be compiled and available on your `PATH
 | Script | Description |
 |--------|-------------|
 | `hf.maestro.list.sh` | List maestro resources |
-| `hf.maestro.get.sh` | Get a maestro resource by name (interactive selection if no name given) |
+| `hf.maestro.get.sh` | Get a maestro resource by name (auto-selects if one match; interactive menu if multiple) |
 | `hf.maestro.delete.sh` | Delete a maestro resource by name (interactive selection if no name given) |
 | `hf.maestro.bundles.sh` | List maestro resource bundles |
 
@@ -154,6 +155,7 @@ Maestro scripts require `maestro-cli` to be compiled and available on your `PATH
 | Script | Description |
 |--------|-------------|
 | `hf.adapter.status.sh` | Post adapter status for current cluster |
+| `hf.pubsub.list.sh` | List Pub/Sub topics and subscriptions, with optional filter (`hf.pubsub.list.sh [filter]`) |
 | `hf.pubsub.publish.sh` | Publish messages to Pub/Sub |
 | `hf.lib.sh` | Shared library (config registry, API helpers, logging, Kubernetes wrappers) |
 
@@ -183,6 +185,7 @@ hf.cluster.get.sh
 ```bash
 hf.nodepool.create.sh my-pool 3 m5.2xlarge
 hf.nodepool.list.sh
+hf.nodepool.table.sh
 hf.nodepool.conditions.sh -w
 ```
 

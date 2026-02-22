@@ -32,6 +32,12 @@ else
     name_array+=("$line")
   done <<< "$names"
 
+  # If only one result, use it directly
+  if [[ ${#name_array[@]} -eq 1 ]]; then
+    get_resource "${name_array[0]}"
+    exit 0
+  fi
+
   echo "Select a maestro resource to get:"
   echo ""
   for i in "${!name_array[@]}"; do

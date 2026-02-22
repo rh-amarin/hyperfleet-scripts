@@ -180,7 +180,7 @@ case "${1:-}" in
 start) do_start ;;
 stop) do_stop ;;
 status) do_status ;;
-*)
+"")
   hf_usage "start|stop|status"
   echo "Commands:"
   echo "  start   Start port forwards to hyperfleet pods"
@@ -188,5 +188,12 @@ status) do_status ;;
   echo "  status  Show status of port forwards"
   echo ""
   do_status
+  ;;
+*)
+  hf_usage "start|stop|status"
+  echo "Commands:"
+  echo "  start   Start port forwards to hyperfleet pods"
+  echo "  stop    Stop all running port forwards"
+  echo "  status  Show status of port forwards"
   ;;
 esac

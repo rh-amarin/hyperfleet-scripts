@@ -15,18 +15,20 @@ hf_info "Checking if cluster '$NAME' exists..."
 EXISTING=$(hf_get "/clusters?search=name='$NAME'" | jq -r ".items[]? | select(.name == \"$NAME\") | .name")
 
 if [[ -n "$EXISTING" ]]; then
-    hf_warn "Cluster '$NAME' already exists, skipping creation"
-    exit 0
+  hf_warn "Cluster '$NAME' already exists, skipping creation"
+  exit 0
 fi
 
 hf_info "Creating cluster: $NAME (region: $REGION, version: $VERSION)"
 
-PAYLOAD=$(cat <<EOF
+PAYLOAD=$(
+  cat <<EOF
 {
   "kind": "Cluster",
   "name": "$NAME",
   "labels": {
     "environment": "development",
+    "shard": "1",
     "team": "core"
   },
   "spec": {
