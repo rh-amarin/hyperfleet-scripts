@@ -65,7 +65,7 @@ _hf_load HF_DB_PASSWORD "$HF_DB_PASSWORD_FILE" ""
 _hf_load HF_MAESTRO_CONSUMER "$HF_MAESTRO_CONSUMER_FILE" "cluster1"
 _hf_load HF_MAESTRO_HTTP_ENDPOINT "$HF_MAESTRO_HTTP_ENDPOINT_FILE" "http://localhost:8100"
 _hf_load HF_MAESTRO_GRPC_ENDPOINT "$HF_MAESTRO_GRPC_ENDPOINT_FILE" "localhost:8090"
-_hf_load HF_MAESTRO_NAMESPACE "$HF_MAESTRO_NAMESPACE_FILE" "maestro-ns2"
+_hf_load HF_MAESTRO_NAMESPACE "$HF_MAESTRO_NAMESPACE_FILE" "maestro"
 _hf_load HF_PF_API_PORT "$HF_PF_API_PORT_FILE" "8000"
 _hf_load HF_PF_PG_PORT "$HF_PF_PG_PORT_FILE" "5432"
 _hf_load HF_PF_MAESTRO_HTTP_PORT "$HF_PF_MAESTRO_HTTP_PORT_FILE" "8100"
@@ -335,7 +335,7 @@ HF_CONFIG_REGISTRY=(
   "maestro|maestro-consumer|cluster1"
   "maestro|maestro-http-endpoint|http://localhost:8100"
   "maestro|maestro-grpc-endpoint|localhost:8090"
-  "maestro|maestro-namespace|maestro-ns2"
+  "maestro|maestro-namespace|maestro"
   "portforward|pf-api-port|8000"
   "portforward|pf-pg-port|5432"
   "portforward|pf-maestro-http-port|8100"
@@ -352,20 +352,36 @@ HF_CONFIG_REGISTRY=(
 _hf_parse() {
   local IFS='|'
   # shellcheck disable=SC2034
-  read -r _HF_E_SECTION _HF_E_KEY _HF_E_DEFAULT _HF_E_FLAGS <<< "$1"
+  read -r _HF_E_SECTION _HF_E_KEY _HF_E_DEFAULT _HF_E_FLAGS <<<"$1"
 }
 
 # Convenience accessors (use after _hf_parse, or accept entry as arg)
-hf_prop_section() { _hf_parse "$1"; echo "$_HF_E_SECTION"; }
-hf_prop_key()     { _hf_parse "$1"; echo "$_HF_E_KEY"; }
-hf_prop_default() { _hf_parse "$1"; echo "$_HF_E_DEFAULT"; }
-hf_prop_flags()   { _hf_parse "$1"; echo "$_HF_E_FLAGS"; }
-hf_prop_is_sensitive() { _hf_parse "$1"; [[ "$_HF_E_FLAGS" == *s* ]]; }
+hf_prop_section() {
+  _hf_parse "$1"
+  echo "$_HF_E_SECTION"
+}
+hf_prop_key() {
+  _hf_parse "$1"
+  echo "$_HF_E_KEY"
+}
+hf_prop_default() {
+  _hf_parse "$1"
+  echo "$_HF_E_DEFAULT"
+}
+hf_prop_flags() {
+  _hf_parse "$1"
+  echo "$_HF_E_FLAGS"
+}
+hf_prop_is_sensitive() {
+  _hf_parse "$1"
+  [[ "$_HF_E_FLAGS" == *s* ]]
+}
 
 # Get all registered keys as a flat list
 hf_config_keys() {
   for entry in "${HF_CONFIG_REGISTRY[@]}"; do
-    _hf_parse "$entry"; echo "$_HF_E_KEY"
+    _hf_parse "$entry"
+    echo "$_HF_E_KEY"
   done
 }
 
