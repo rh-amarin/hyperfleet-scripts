@@ -16,7 +16,18 @@ MAESTRO_NAMESPACE="$HF_MAESTRO_NAMESPACE"
 
 # Get PID of kubectl port-forward using a specific port
 get_port_pid() {
-  lsof -ti ":$1" 2>/dev/null | head -1
+  local port="$1"
+
+  # Try lsof first (works on macOS and some Linux systems)
+  if command -v lsof &>/dev/null; then
+    lsof -ti ":$port" 2>/dev/null | head -1
+  # Fall back to ss (available on most Linux systems)
+  elif command -v ss &>/dev/null; then
+    ss -tlnp 2>/dev/null | grep -E "[[:space:]]127\.0\.0\.1:${port}[[:space:]]|[[:space:]]\[::\]:${port}[[:space:]]|\[::1\]:${port}[[:space:]]" |
+      sed -n 's/.*pid=\([0-9]*\).*/\1/p' | head -1
+  else
+    hf_die "Neither lsof nor ss command found. Please install one of them."
+  fi
 }
 
 is_port_in_use() {
@@ -181,8 +192,8 @@ start) do_start ;;
 stop) do_stop ;;
 status)
   do_status
-  if ! is_port_in_use "$API_LOCAL_PORT" && ! is_port_in_use "$PG_LOCAL_PORT" && \
-     ! is_port_in_use "$MAESTRO_HTTP_LOCAL_PORT" && ! is_port_in_use "$MAESTRO_GRPC_LOCAL_PORT"; then
+  if ! is_port_in_use "$API_LOCAL_PORT" && ! is_port_in_use "$PG_LOCAL_PORT" &&
+    ! is_port_in_use "$MAESTRO_HTTP_LOCAL_PORT" && ! is_port_in_use "$MAESTRO_GRPC_LOCAL_PORT"; then
     echo ""
     read -r -p "No port forwards running. Start them? [Y/n] " reply
     reply="${reply:-Y}"
@@ -199,8 +210,8 @@ status)
   echo "  status  Show status of port forwards"
   echo ""
   do_status
-  if ! is_port_in_use "$API_LOCAL_PORT" && ! is_port_in_use "$PG_LOCAL_PORT" && \
-     ! is_port_in_use "$MAESTRO_HTTP_LOCAL_PORT" && ! is_port_in_use "$MAESTRO_GRPC_LOCAL_PORT"; then
+  if ! is_port_in_use "$API_LOCAL_PORT" && ! is_port_in_use "$PG_LOCAL_PORT" &&
+    ! is_port_in_use "$MAESTRO_HTTP_LOCAL_PORT" && ! is_port_in_use "$MAESTRO_GRPC_LOCAL_PORT"; then
     echo ""
     read -r -p "No port forwards running. Start them? [Y/n] " reply
     reply="${reply:-Y}"
