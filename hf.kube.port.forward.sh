@@ -179,7 +179,18 @@ do_status() {
 case "${1:-}" in
 start) do_start ;;
 stop) do_stop ;;
-status) do_status ;;
+status)
+  do_status
+  if ! is_port_in_use "$API_LOCAL_PORT" && ! is_port_in_use "$PG_LOCAL_PORT" && \
+     ! is_port_in_use "$MAESTRO_HTTP_LOCAL_PORT" && ! is_port_in_use "$MAESTRO_GRPC_LOCAL_PORT"; then
+    echo ""
+    read -r -p "No port forwards running. Start them? [Y/n] " reply
+    reply="${reply:-Y}"
+    if [[ "$reply" =~ ^[Yy]$ ]]; then
+      do_start
+    fi
+  fi
+  ;;
 "")
   hf_usage "start|stop|status"
   echo "Commands:"
@@ -188,6 +199,15 @@ status) do_status ;;
   echo "  status  Show status of port forwards"
   echo ""
   do_status
+  if ! is_port_in_use "$API_LOCAL_PORT" && ! is_port_in_use "$PG_LOCAL_PORT" && \
+     ! is_port_in_use "$MAESTRO_HTTP_LOCAL_PORT" && ! is_port_in_use "$MAESTRO_GRPC_LOCAL_PORT"; then
+    echo ""
+    read -r -p "No port forwards running. Start them? [Y/n] " reply
+    reply="${reply:-Y}"
+    if [[ "$reply" =~ ^[Yy]$ ]]; then
+      do_start
+    fi
+  fi
   ;;
 *)
   hf_usage "start|stop|status"
