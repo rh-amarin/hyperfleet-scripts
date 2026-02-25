@@ -343,9 +343,9 @@ HF_CONFIG_REGISTRY=(
   "portforward|pf-maestro-grpc-port|8090"
   "database|db-host|localhost"
   "database|db-port|5432"
-  "database|db-name"
-  "database|db-user"
-  "database|db-password||s"
+  "database|db-name|hyperfleet"
+  "database|db-user|hyperfleet"
+  "database|db-password|foobar-bizz-buzz|s"
 )
 
 # Parse a registry entry into _HF_E_* variables (no subshells)
