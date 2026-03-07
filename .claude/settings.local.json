@@ -9,7 +9,9 @@
       "Bash(do bash -n \"$f\")",
       "Bash(done)",
       "Bash(source hf.lib.sh)",
-      "Bash(hf_config_entry:*)"
+      "Bash(hf_config_entry:*)",
+      "Bash(git mv:*)",
+      "Bash(source:*)"
     ]
   }
 }

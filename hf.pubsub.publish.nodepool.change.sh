@@ -11,7 +11,8 @@ hf_require_gcloud
 CLUSTER_ID=$(hf_cluster_id)
 NODEPOOL_ID=$(hf_nodepool_id)
 
-MESSAGE=$(cat <<EOF
+MESSAGE=$(
+  cat <<EOF
 {
   "specversion": "1.0",
   "type": "com.redhat.hyperfleet.nodepool.reconcile.v1",
@@ -22,8 +23,15 @@ MESSAGE=$(cat <<EOF
   "data": {
     "id": "${NODEPOOL_ID}",
     "kind": "NodePool",
-    "href": "https://api.hyperfleet.com/v1/clusters/${CLUSTER_ID}/node_pools/${NODEPOOL_ID}",
-    "generation": 1
+    "href": "http://localhost:8000/api/hyperfleet/v1/clusters/${CLUSTER_ID}/node_pools/${NODEPOOL_ID}",
+    "generation": 1,
+    "owner_references": {
+      "id": "${CLUSTER_ID}",
+      "kind": "NodePool",
+      "href": "http://localhost:8000/api/hyperfleet/v1/clusters/${CLUSTER_ID}",
+      "generation": 1
+    }
+
   }
 }
 EOF

@@ -49,6 +49,11 @@ HF_PF_PG_PORT_FILE="$HF_CONFIG_DIR/pf-pg-port"
 HF_PF_MAESTRO_HTTP_PORT_FILE="$HF_CONFIG_DIR/pf-maestro-http-port"
 HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE="$HF_CONFIG_DIR/pf-maestro-http-remote-port"
 HF_PF_MAESTRO_GRPC_PORT_FILE="$HF_CONFIG_DIR/pf-maestro-grpc-port"
+HF_RABBITMQ_HOST_FILE="$HF_CONFIG_DIR/rabbitmq-host"
+HF_RABBITMQ_MGMT_PORT_FILE="$HF_CONFIG_DIR/rabbitmq-mgmt-port"
+HF_RABBITMQ_USER_FILE="$HF_CONFIG_DIR/rabbitmq-user"
+HF_RABBITMQ_PASSWORD_FILE="$HF_CONFIG_DIR/rabbitmq-password"
+HF_RABBITMQ_VHOST_FILE="$HF_CONFIG_DIR/rabbitmq-vhost"
 
 # Load config from files (env vars take precedence)
 _hf_load HF_API_URL "$HF_API_URL_FILE" "http://localhost:8000"
@@ -71,6 +76,11 @@ _hf_load HF_PF_PG_PORT "$HF_PF_PG_PORT_FILE" "5432"
 _hf_load HF_PF_MAESTRO_HTTP_PORT "$HF_PF_MAESTRO_HTTP_PORT_FILE" "8100"
 _hf_load HF_PF_MAESTRO_HTTP_REMOTE_PORT "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" "8000"
 _hf_load HF_PF_MAESTRO_GRPC_PORT "$HF_PF_MAESTRO_GRPC_PORT_FILE" "8090"
+_hf_load HF_RABBITMQ_HOST "$HF_RABBITMQ_HOST_FILE" "localhost"
+_hf_load HF_RABBITMQ_MGMT_PORT "$HF_RABBITMQ_MGMT_PORT_FILE" "15672"
+_hf_load HF_RABBITMQ_USER "$HF_RABBITMQ_USER_FILE" "guest"
+_hf_load HF_RABBITMQ_PASSWORD "$HF_RABBITMQ_PASSWORD_FILE" "guest"
+_hf_load HF_RABBITMQ_VHOST "$HF_RABBITMQ_VHOST_FILE" "/"
 
 # ============================================================================
 # Colors
@@ -273,6 +283,7 @@ hf_require_psql() {
   command -v psql &>/dev/null || hf_die "psql (PostgreSQL client) is required but not installed"
 }
 
+
 # ============================================================================
 # Kubernetes Helpers
 # ============================================================================
@@ -346,6 +357,11 @@ HF_CONFIG_REGISTRY=(
   "database|db-name|hyperfleet"
   "database|db-user|hyperfleet"
   "database|db-password|foobar-bizz-buzz|s"
+  "rabbitmq|rabbitmq-host|localhost"
+  "rabbitmq|rabbitmq-mgmt-port|15672"
+  "rabbitmq|rabbitmq-user|guest"
+  "rabbitmq|rabbitmq-password|guest|s"
+  "rabbitmq|rabbitmq-vhost|/"
 )
 
 # Parse a registry entry into _HF_E_* variables (no subshells)

@@ -24,14 +24,14 @@ hf_get "/clusters/${CLUSTER_ID}/nodepools" | jq -r '
   ($items[] | . as $np |
     [.id, .name, (.spec.replicas | tostring), (.spec.platform.type // "-")] +
     [$types[] as $t | (($np.status.conditions // []) | map(select(.type == $t)) | .[0].status |
-      if . == "True" then "##GRN##"
-      elif . == "False" then "##RED##"
-      elif . == "Unknown" then "##YLW##"
+      if . == "True" then "\u0001"
+      elif . == "False" then "\u0002"
+      elif . == "Unknown" then "\u0003"
       elif . == "" or . == null then "-"
       else . end)]
     | @tsv
   )
 ' | column -t -s $'\t' | sed \
-    -e "s/##GRN##/${GREEN}●${NC}/g" \
-    -e "s/##RED##/${RED}●${NC}/g" \
-    -e "s/##YLW##/${YELLOW}●${NC}/g"
+    -e $'s/\x01/'"${GREEN}●${NC}"'/g' \
+    -e $'s/\x02/'"${RED}●${NC}"'/g' \
+    -e $'s/\x03/'"${YELLOW}●${NC}"'/g'

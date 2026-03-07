@@ -5,5 +5,5 @@ hf_require_config api-url api-version cluster-id
 
 hf_require_jq
 CLUSTER_ID=$(hf_cluster_id "${1:-}")
-hf_info "Getting cluster: $CLUSTER_ID"
+[ -t 1 ] && hf_info "Getting cluster: $CLUSTER_ID"
 hf_get "/clusters/${CLUSTER_ID}" | jq

@@ -104,26 +104,28 @@ do_start() {
   ns=$(find_namespace) || exit 1
   hf_info "Using namespace: $ns"
 
-  local api_pod pg_pod
+  local api_pod pg_pod maestro_pod
   api_pod=$(get_pod "$ns" "hyperfleet-api")
-  create_forward "$ns" "$api_pod" "$API_LOCAL_PORT" "$API_REMOTE_PORT" "hyperfleet-api"
-
   pg_pod=$(get_pod "$ns" "postgresql")
   [[ -z "$pg_pod" ]] && pg_pod=$(get_pod "$ns" "postgres")
-  create_forward "$ns" "$pg_pod" "$PG_LOCAL_PORT" "$PG_REMOTE_PORT" "postgresql"
+
+  # Start all port forwards in parallel
+  create_forward "$ns" "$api_pod" "$API_LOCAL_PORT" "$API_REMOTE_PORT" "hyperfleet-api" &
+  create_forward "$ns" "$pg_pod" "$PG_LOCAL_PORT" "$PG_REMOTE_PORT" "postgresql" &
 
   # Maestro server port forwards
   if hf_kubectl get namespace "$MAESTRO_NAMESPACE" &>/dev/null; then
-    local maestro_pod
     maestro_pod=$(get_pod "$MAESTRO_NAMESPACE" "maestro")
-    create_forward "$MAESTRO_NAMESPACE" "$maestro_pod" "$MAESTRO_HTTP_LOCAL_PORT" "$MAESTRO_HTTP_REMOTE_PORT" "maestro-http"
-    create_forward "$MAESTRO_NAMESPACE" "$maestro_pod" "$MAESTRO_GRPC_LOCAL_PORT" "$MAESTRO_GRPC_REMOTE_PORT" "maestro-grpc"
+    create_forward "$MAESTRO_NAMESPACE" "$maestro_pod" "$MAESTRO_HTTP_LOCAL_PORT" "$MAESTRO_HTTP_REMOTE_PORT" "maestro-http" &
+    create_forward "$MAESTRO_NAMESPACE" "$maestro_pod" "$MAESTRO_GRPC_LOCAL_PORT" "$MAESTRO_GRPC_REMOTE_PORT" "maestro-grpc" &
   else
     hf_warn "Maestro namespace '$MAESTRO_NAMESPACE' not found - skipping maestro forwards"
   fi
 
-  echo ""
+  wait
+
   sleep 1
+  echo ""
   do_status
   echo ""
   hf_info "Use 'hf.kube.port.forward.sh stop' to stop."

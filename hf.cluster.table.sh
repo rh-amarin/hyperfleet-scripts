@@ -27,14 +27,37 @@ hf_get "/clusters" | jq -r '
   # Build data rows
   ($items[] | . as $cluster |
     [.id, .name] + [$types[] as $t | ($cluster.status.conditions | map(select(.type == $t)) | .[0].status |
-      if . == "True" then "##GRN##"
-      elif . == "False" then "##RED##"
-      elif . == "Unknown" then "##YLW##"
+      if . == "True" then "\u0001"
+      elif . == "False" then "\u0002"
+      elif . == "Unknown" then "\u0003"
       elif . == "" or . == null then "-"
       else . end)]
     | @tsv
   )
-' | column -t -s $'\t' | sed \
-    -e "s/##GRN##/${GREEN}●${RESET}/g" \
-    -e "s/##RED##/${RED}●${RESET}/g" \
-    -e "s/##YLW##/${YELLOW}●${RESET}/g"
+' | awk -v green="$GREEN" -v red="$RED" -v yellow="$YELLOW" -v reset="$RESET" '
+BEGIN { FS = "\t" }
+{
+  row[NR] = $0
+  n = split($0, f, "\t")
+  if (n > ncols) ncols = n
+  for (i = 1; i <= n; i++) {
+    w = length(f[i])
+    if (w > cw[i]) cw[i] = w
+  }
+}
+END {
+  for (r = 1; r <= NR; r++) {
+    n = split(row[r], f, "\t")
+    for (i = 1; i <= ncols; i++) {
+      cell = (i <= n) ? f[i] : ""
+      if      (cell == "\001") display = green "●" reset
+      else if (cell == "\002") display = red   "●" reset
+      else if (cell == "\003") display = yellow "●" reset
+      else                     display = cell
+      pad = cw[i] - length(cell)
+      if (i < ncols) printf "%s%*s  ", display, pad, ""
+      else           printf "%s", display
+    }
+    printf "\n"
+  }
+}'
