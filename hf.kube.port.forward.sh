@@ -183,21 +183,21 @@ show_port_status() {
 do_status() {
   echo -e "${BOLD}Port Forward Status${NC}\n"
 
-  show_port_status "$API_LOCAL_PORT" "hyperfleet-api"
-  show_port_status "$PG_LOCAL_PORT" "postgresql"
-  show_port_status "$MAESTRO_HTTP_LOCAL_PORT" "maestro-http"
-  show_port_status "$MAESTRO_GRPC_LOCAL_PORT" "maestro-grpc"
+  local any_down=0
+  show_port_status "$API_LOCAL_PORT" "hyperfleet-api" || any_down=1
+  show_port_status "$PG_LOCAL_PORT" "postgresql" || any_down=1
+  show_port_status "$MAESTRO_HTTP_LOCAL_PORT" "maestro-http" || any_down=1
+  show_port_status "$MAESTRO_GRPC_LOCAL_PORT" "maestro-grpc" || any_down=1
+  return $any_down
 }
 
 case "${1:-}" in
 start) do_start ;;
 stop) do_stop ;;
 status)
-  do_status
-  if ! is_port_in_use "$API_LOCAL_PORT" && ! is_port_in_use "$PG_LOCAL_PORT" &&
-    ! is_port_in_use "$MAESTRO_HTTP_LOCAL_PORT" && ! is_port_in_use "$MAESTRO_GRPC_LOCAL_PORT"; then
+  if ! do_status; then
     echo ""
-    read -r -p "No port forwards running. Start them? [Y/n] " reply
+    read -r -p "Some port forwards are down. Start all? [Y/n] " reply
     reply="${reply:-Y}"
     if [[ "$reply" =~ ^[Yy]$ ]]; then
       do_start
@@ -211,11 +211,9 @@ status)
   echo "  stop    Stop all running port forwards"
   echo "  status  Show status of port forwards"
   echo ""
-  do_status
-  if ! is_port_in_use "$API_LOCAL_PORT" && ! is_port_in_use "$PG_LOCAL_PORT" &&
-    ! is_port_in_use "$MAESTRO_HTTP_LOCAL_PORT" && ! is_port_in_use "$MAESTRO_GRPC_LOCAL_PORT"; then
+  if ! do_status; then
     echo ""
-    read -r -p "No port forwards running. Start them? [Y/n] " reply
+    read -r -p "Some port forwards are down. Start all? [Y/n] " reply
     reply="${reply:-Y}"
     if [[ "$reply" =~ ^[Yy]$ ]]; then
       do_start
