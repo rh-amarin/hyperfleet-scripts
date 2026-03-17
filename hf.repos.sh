@@ -15,6 +15,9 @@ REPOS=(
   "https://github.com/openshift-hyperfleet/architecture"
 )
 
+# Repos that have a corresponding image on quay.io (name must match repo basename)
+QUAY_IMAGES=("hyperfleet-api" "hyperfleet-sentinel" "hyperfleet-adapter")
+
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
@@ -22,6 +25,7 @@ trap 'rm -rf "$tmpdir"' EXIT
 for i in "${!REPOS[@]}"; do
   repo_url="${REPOS[$i]}"
   repo_path="${repo_url#https://github.com/}"
+  repo_name=$(basename "$repo_url")
   (
     commit=$(gh api "repos/$repo_path/commits?per_page=1" \
       --jq '.[0].sha[0:7]' 2>/dev/null)
@@ -31,7 +35,29 @@ for i in "${!REPOS[@]}"; do
     pr_url=$(printf '%s' "$pr_json" | jq -r '.[0].html_url // "-"')
     pr_branch=$(printf '%s' "$pr_json" | jq -r '.[0].head.ref // "-"')
 
-    printf '%s\t%s\t%s\t%s\n' "$repo_url" "$commit" "$pr_url" "$pr_branch" \
+    quay_tag="-"
+    quay_aliases="-"
+    if [[ " ${QUAY_IMAGES[*]} " == *" $repo_name "* ]]; then
+      quay_json=$(curl -sf "https://quay.io/api/v1/repository/${HF_REGISTRY}/${repo_name}/tag/?limit=100&onlyActiveTags=true" 2>/dev/null)
+      if [[ -n "$quay_json" ]] && printf '%s' "$quay_json" | jq -e '.tags | length > 0' &>/dev/null; then
+        quay_info=$(printf '%s' "$quay_json" | jq -r '
+          .tags |
+          sort_by(.start_ts // 0) | reverse |
+          .[0] as $top |
+          ($top.manifest_digest) as $dig |
+          [.[] | select(.manifest_digest == $dig) | .name] as $aliases |
+          ($top.start_ts | todate | .[0:10]) as $date |
+          ($top.name + " (" + $date + ")") + "\t" +
+          (if ($aliases | length) > 1
+           then ($aliases | map(select(. != $top.name)) | join(","))
+           else "-" end)
+        ')
+        IFS=$'\t' read -r quay_tag quay_aliases <<< "$quay_info"
+      fi
+    fi
+
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+      "$repo_url" "$commit" "$pr_url" "$pr_branch" "$quay_tag" "$quay_aliases" \
       > "$tmpdir/$i"
   ) &
 done
@@ -39,8 +65,8 @@ wait
 
 # Collect rows in original order
 rows=()
-rows+=("REPOSITORY	COMMIT	PR URL	PR BRANCH")
-rows+=("---	---	---	---")
+rows+=("REPOSITORY	COMMIT	PR URL	PR BRANCH	QUAY TAG	QUAY ALIASES")
+rows+=("---	---	---	---	---	---")
 for i in "${!REPOS[@]}"; do
   rows+=("$(cat "$tmpdir/$i")")
 done

@@ -54,6 +54,7 @@ HF_RABBITMQ_MGMT_PORT_FILE="$HF_CONFIG_DIR/rabbitmq-mgmt-port"
 HF_RABBITMQ_USER_FILE="$HF_CONFIG_DIR/rabbitmq-user"
 HF_RABBITMQ_PASSWORD_FILE="$HF_CONFIG_DIR/rabbitmq-password"
 HF_RABBITMQ_VHOST_FILE="$HF_CONFIG_DIR/rabbitmq-vhost"
+HF_REGISTRY_FILE="$HF_CONFIG_DIR/registry"
 
 # Load config from files (env vars take precedence)
 _hf_load HF_API_URL "$HF_API_URL_FILE" "http://localhost:8000"
@@ -81,6 +82,7 @@ _hf_load HF_RABBITMQ_MGMT_PORT "$HF_RABBITMQ_MGMT_PORT_FILE" "15672"
 _hf_load HF_RABBITMQ_USER "$HF_RABBITMQ_USER_FILE" "guest"
 _hf_load HF_RABBITMQ_PASSWORD "$HF_RABBITMQ_PASSWORD_FILE" "guest"
 _hf_load HF_RABBITMQ_VHOST "$HF_RABBITMQ_VHOST_FILE" "/"
+_hf_load HF_REGISTRY "$HF_REGISTRY_FILE" "$USER"
 
 # ============================================================================
 # Colors
@@ -212,6 +214,7 @@ hf_set_pf_pg_port() { _hf_set HF_PF_PG_PORT "$HF_PF_PG_PORT_FILE" "$1" "Port-for
 hf_set_pf_maestro_http_port() { _hf_set HF_PF_MAESTRO_HTTP_PORT "$HF_PF_MAESTRO_HTTP_PORT_FILE" "$1" "Port-forward Maestro HTTP port"; }
 hf_set_pf_maestro_http_remote_port() { _hf_set HF_PF_MAESTRO_HTTP_REMOTE_PORT "$HF_PF_MAESTRO_HTTP_REMOTE_PORT_FILE" "$1" "Port-forward Maestro HTTP remote port"; }
 hf_set_pf_maestro_grpc_port() { _hf_set HF_PF_MAESTRO_GRPC_PORT "$HF_PF_MAESTRO_GRPC_PORT_FILE" "$1" "Port-forward Maestro gRPC port"; }
+hf_set_registry() { _hf_set HF_REGISTRY "$HF_REGISTRY_FILE" "$1" "Registry"; }
 
 hf_clear_context() { _hf_clear HF_KUBE_CONTEXT "$HF_CONTEXT_FILE" "Context"; }
 hf_clear_namespace() { _hf_clear HF_KUBE_NAMESPACE "$HF_NAMESPACE_FILE" "Namespace"; }
@@ -362,6 +365,7 @@ HF_CONFIG_REGISTRY=(
   "rabbitmq|rabbitmq-user|guest"
   "rabbitmq|rabbitmq-password|guest|s"
   "rabbitmq|rabbitmq-vhost|/"
+  "registry|registry|$USER"
 )
 
 # Parse a registry entry into _HF_E_* variables (no subshells)
