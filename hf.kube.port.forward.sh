@@ -35,23 +35,8 @@ is_port_in_use() {
 }
 
 find_namespace() {
-  local namespaces=("hyperfleet" "default" "hyperfleet-dev" "hyperfleet-local")
-
-  if [[ -n "$HF_KUBE_NAMESPACE" ]]; then
-    echo "$HF_KUBE_NAMESPACE"
-    return 0
-  fi
-
-  for ns in "${namespaces[@]}"; do
-    if hf_kubectl get namespace "$ns" &>/dev/null; then
-      if hf_kubectl get pods -n "$ns" -l app=hyperfleet-api --no-headers 2>/dev/null | grep -q .; then
-        echo "$ns"
-        return 0
-      fi
-    fi
-  done
-
-  hf_die "No namespace found with hyperfleet pods"
+  [[ -z "$HF_KUBE_NAMESPACE" ]] && hf_die "Namespace not configured. Run: hf.config.sh set namespace <name>"
+  echo "$HF_KUBE_NAMESPACE"
 }
 
 get_pod() {
