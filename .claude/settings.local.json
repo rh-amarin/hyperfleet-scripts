@@ -1,17 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(./hf.cluster.list.sh:*)",
-      "Bash(chmod:*)",
-      "Bash(./hf.cluster.table.sh:*)",
-      "Bash(bash:*)",
-      "Bash(for f in hf.*.sh)",
-      "Bash(do bash -n \"$f\")",
-      "Bash(done)",
-      "Bash(source hf.lib.sh)",
-      "Bash(hf_config_entry:*)",
-      "Bash(git mv:*)",
-      "Bash(source:*)"
+      "Bash(./hf.cluster.search.sh xxxxx:*)"
     ]
   }
 }

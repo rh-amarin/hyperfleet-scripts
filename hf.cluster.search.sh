@@ -15,14 +15,14 @@ hf_require_jq
 hf_info "Searching for cluster: $SEARCH_NAME"
 
 RESULT=$(hf_get "/clusters?search=name='$SEARCH_NAME'")
-echo "$RESULT" | jq
-
-COUNT=$(echo "$RESULT" | jq '.items | length')
+EXACT=$(echo "$RESULT" | jq --arg name "$SEARCH_NAME" '[.items[] | select(.name == $name and .deleted_at == null)]')
+echo "$EXACT" | jq
+COUNT=$(echo "$EXACT" | jq 'length')
 if [[ "$COUNT" -eq 1 ]]; then
-    CLUSTER_ID=$(echo "$RESULT" | jq -r '.items[0].id')
+    CLUSTER_ID=$(echo "$EXACT" | jq -r '.[0].id')
     hf_set_cluster_id "$CLUSTER_ID"
 elif [[ "$COUNT" -gt 1 ]]; then
-    hf_warn "Multiple clusters found. Use a more specific search."
+    hf_warn "Multiple clusters found with name '$SEARCH_NAME'. Use a more specific search."
 else
     hf_warn "No clusters found matching '$SEARCH_NAME'"
 fi
