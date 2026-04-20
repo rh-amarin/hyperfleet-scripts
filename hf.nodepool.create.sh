@@ -4,9 +4,9 @@
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
 hf_require_config api-url api-version cluster-id
 
-NAME="${1:-}"
-REPLICAS="${2:-2}"
-INSTANCE_TYPE="${3:-m5.xlarge}"
+NAME="${1:-my-nodepool}"
+REPLICAS="${2:-1}"
+INSTANCE_TYPE="${3:-m4}"
 
 [[ -z "$NAME" ]] && {
   hf_usage "<name> [replicas] [instance-type]"
