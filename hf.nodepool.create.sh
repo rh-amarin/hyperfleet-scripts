@@ -23,12 +23,17 @@ CLUSTER_ID=$(hf_cluster_id)
 hf_info "Creating nodepool '$NAME' in cluster: $CLUSTER_ID"
 hf_info "  Replicas: $REPLICAS, Instance type: $INSTANCE_TYPE"
 
-PAYLOAD=$(cat <<EOF
+PAYLOAD=$(
+  cat <<EOF
 {
   "kind": "NodePool",
   "name": "$NAME",
+  "labels": {
+    "counter":"1"
+  },
   "spec": {
     "replicas": $REPLICAS,
+    "counter":"1",
     "platform": {
       "type": "$INSTANCE_TYPE"
     }

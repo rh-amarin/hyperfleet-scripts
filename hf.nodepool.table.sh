@@ -7,6 +7,11 @@ hf_require_config api-url api-version cluster-id
 hf_require_jq
 CLUSTER_ID=$(hf_cluster_id "${1:-}")
 
+GREEN=$(printf '\033[32m')
+RED=$(printf '\033[31m')
+YELLOW=$(printf '\033[33m')
+RESET=$(printf '\033[0m')
+
 hf_get "/clusters/${CLUSTER_ID}/nodepools" | jq -r '
   # Collect all unique condition types across all nodepools
   ([.items[].status.conditions[]?.type] | unique) as $types |
@@ -31,7 +36,30 @@ hf_get "/clusters/${CLUSTER_ID}/nodepools" | jq -r '
       else . end)]
     | @tsv
   )
-' | column -t -s $'\t' | sed \
-    -e $'s/\x01/'"${GREEN}●${NC}"'/g' \
-    -e $'s/\x02/'"${RED}●${NC}"'/g' \
-    -e $'s/\x03/'"${YELLOW}●${NC}"'/g'
+' | awk -v green="$GREEN" -v red="$RED" -v yellow="$YELLOW" -v reset="$RESET" '
+BEGIN { FS = "\t" }
+{
+  row[NR] = $0
+  n = split($0, f, "\t")
+  if (n > ncols) ncols = n
+  for (i = 1; i <= n; i++) {
+    w = length(f[i])
+    if (w > cw[i]) cw[i] = w
+  }
+}
+END {
+  for (r = 1; r <= NR; r++) {
+    n = split(row[r], f, "\t")
+    for (i = 1; i <= ncols; i++) {
+      cell = (i <= n) ? f[i] : ""
+      if      (cell == "\001") display = green "●" reset
+      else if (cell == "\002") display = red   "●" reset
+      else if (cell == "\003") display = yellow "●" reset
+      else                     display = cell
+      pad = cw[i] - length(cell)
+      if (i < ncols) printf "%s%*s  ", display, pad, ""
+      else           printf "%s", display
+    }
+    printf "\n"
+  }
+}'

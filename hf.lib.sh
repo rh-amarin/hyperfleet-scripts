@@ -260,6 +260,7 @@ hf_api() {
 # Shorthand for common API methods
 hf_get() { hf_api GET "$1"; }
 hf_post() { hf_api POST "$1" "$2"; }
+hf_patch() { hf_api PATCH "$1" "$2"; }
 hf_delete() { hf_api DELETE "$1"; }
 
 # ============================================================================

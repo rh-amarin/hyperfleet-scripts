@@ -29,11 +29,13 @@ PAYLOAD=$(
   "labels": {
     "environment": "development",
     "shard": "1",
-    "team": "core"
+    "team": "core",
+    "counter": "1"
   },
   "spec": {
     "region": "$REGION",
-    "version": "$VERSION"
+    "version": "$VERSION",
+    "counter": "1"
   }
 }
 EOF
