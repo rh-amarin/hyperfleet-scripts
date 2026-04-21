@@ -9,6 +9,21 @@ hf.config.sh bootstrap my-env    # Interactive setup: context, API, port-forward
 hf.config.sh doctor              # Check which scripts are ready to use
 ```
 
+## Script Groups
+
+| Prefix | What it manages |
+|--------|----------------|
+| `hf.cluster.*` | Cluster API objects — create, inspect, patch, watch conditions and statuses |
+| `hf.nodepool.*` | NodePool API objects — create, inspect, patch, watch conditions and statuses |
+| `hf.db.*` | Direct database access — queries, status records, cleanup |
+| `hf.kube.*` | Kubernetes helpers — context, port-forward, in-cluster curl, debug pods |
+| `hf.logs.*` | Log tailing — pods and adapter-filtered logs |
+| `hf.maestro.*` | Maestro resource management via `maestro-cli` |
+| `hf.pubsub.*` | GCP Pub/Sub — list topics/subscriptions, publish change events |
+| `hf.rabbitmq.*` | RabbitMQ — publish change events via HTTP management API |
+| `hf.repos.*` | GitHub repository status overview |
+| `hf.config.*` | Configuration management — environments, bootstrap, doctor |
+
 ## Config System
 
 All scripts use a **file-based configuration** system with environment variable overrides:
@@ -66,8 +81,11 @@ No other files need to change -- `hf.config.sh`, environments, and doctor all de
 | `hf.cluster.list.sh` | List all clusters |
 | `hf.cluster.table.sh` | Display clusters in table format |
 | `hf.cluster.id.sh` | Show current cluster ID |
+| `hf.cluster.patch.sh` | Increment counter field in cluster spec or labels |
 | `hf.cluster.conditions.sh` | Show cluster conditions (`-w` for watch) |
+| `hf.cluster.conditions.table.sh` | Show cluster conditions in table format |
 | `hf.cluster.statuses.sh` | Show cluster adapter statuses (`-w` for watch) |
+| `hf.cluster.adapter.post.status.sh` | Post adapter status for current cluster |
 
 ### NodePool Management
 
@@ -78,8 +96,11 @@ No other files need to change -- `hf.config.sh`, environments, and doctor all de
 | `hf.nodepool.get.sh` | Get node pool details |
 | `hf.nodepool.list.sh` | List node pools for the current cluster |
 | `hf.nodepool.table.sh` | Display node pools in table format |
+| `hf.nodepool.patch.sh` | Increment counter field in nodepool spec or labels |
 | `hf.nodepool.conditions.sh` | Show node pool conditions (`-w` for watch) |
+| `hf.nodepool.conditions.table.sh` | Show node pool conditions in table format |
 | `hf.nodepool.statuses.sh` | Show node pool adapter statuses (`-w` for watch) |
+| `hf.nodepool.adapter.post.status.sh` | Post adapter status for current node pool |
 
 ### Database Operations
 
@@ -99,7 +120,6 @@ No other files need to change -- `hf.config.sh`, environments, and doctor all de
 | `hf.kube.curl.sh` | Run curl from inside a cluster pod (see below) |
 | `hf.kube.debug.pod.sh` | Create debug pod cloned from a deployment (see below) |
 | `hf.kube.port.forward.sh` | Port forward to services/pods |
-| `hf.logs.sh` | Tail pod logs with context |
 
 #### `hf.kube.curl.sh`
 
@@ -139,6 +159,13 @@ hf.kube.debug.pod.sh my-app staging
 kubectl delete pod my-app-debug-<timestamp> -n default
 ```
 
+### Logs
+
+| Script | Description |
+|--------|-------------|
+| `hf.logs.sh` | Tail pod logs with context |
+| `hf.logs.adapter.sh` | Tail adapter pod logs filtered by cluster ID |
+
 ### Maestro
 
 Maestro scripts require `maestro-cli` to be compiled and available on your `PATH` from [openshift-hyperfleet/maestro-cli](https://github.com/openshift-hyperfleet/maestro-cli).
@@ -149,14 +176,23 @@ Maestro scripts require `maestro-cli` to be compiled and available on your `PATH
 | `hf.maestro.get.sh` | Get a maestro resource by name (auto-selects if one match; interactive menu if multiple) |
 | `hf.maestro.delete.sh` | Delete a maestro resource by name (interactive selection if no name given) |
 | `hf.maestro.bundles.sh` | List maestro resource bundles |
+| `hf.maestro.consumers.sh` | List maestro consumers |
+| `hf.maestro.tui.sh` | Launch maestro-cli TUI |
+
+### Pub/Sub and Messaging
+
+| Script | Description |
+|--------|-------------|
+| `hf.pubsub.list.sh` | List Pub/Sub topics and subscriptions, with optional filter |
+| `hf.pubsub.publish.cluster.change.sh` | Publish cluster change event to a Pub/Sub topic |
+| `hf.pubsub.publish.nodepool.change.sh` | Publish nodepool change event to a Pub/Sub topic |
+| `hf.rabbitmq.publish.cluster.change.sh` | Publish cluster change event to a RabbitMQ exchange via HTTP management API |
 
 ### Other Utilities
 
 | Script | Description |
 |--------|-------------|
-| `hf.adapter.status.sh` | Post adapter status for current cluster |
-| `hf.pubsub.list.sh` | List Pub/Sub topics and subscriptions, with optional filter (`hf.pubsub.list.sh [filter]`) |
-| `hf.pubsub.publish.sh` | Publish messages to Pub/Sub |
+| `hf.repos.sh` | Show status table for all HyperFleet GitHub repositories |
 | `hf.lib.sh` | Shared library (config registry, API helpers, logging, Kubernetes wrappers) |
 
 ## Common Patterns
@@ -187,6 +223,12 @@ hf.nodepool.create.sh my-pool 3 m5.2xlarge
 hf.nodepool.list.sh
 hf.nodepool.table.sh
 hf.nodepool.conditions.sh -w
+```
+
+**Post adapter status manually**:
+```bash
+hf.cluster.adapter.post.status.sh validator True 1
+hf.nodepool.adapter.post.status.sh provisioner True 1
 ```
 
 **Switch environments**:
