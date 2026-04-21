@@ -192,6 +192,7 @@ Maestro scripts require `maestro-cli` to be compiled and available on your `PATH
 
 | Script | Description |
 |--------|-------------|
+| `hf.workflow.sh` | End-to-end test workflow: create cluster+nodepool, cycle adapter statuses and patches through multiple generations, then delete |
 | `hf.repos.sh` | Show status table for all HyperFleet GitHub repositories |
 | `hf.lib.sh` | Shared library (config registry, API helpers, logging, Kubernetes wrappers) |
 
