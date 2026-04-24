@@ -1,52 +1,56 @@
 #!/bin/bash
-# Create a new NodePool under the current cluster
-# Usage: hf.nodepool.create.sh <name> [replicas] [instance-type]
+# Create one or more NodePools under the current cluster
+# Usage: hf.nodepool.create.sh <name> [count] [instance-type]
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
 hf_require_config api-url api-version cluster-id
 
 NAME="${1:-my-nodepool}"
-REPLICAS="${2:-1}"
+COUNT="${2:-1}"
 INSTANCE_TYPE="${3:-m4}"
 
 [[ -z "$NAME" ]] && {
-  hf_usage "<name> [replicas] [instance-type]"
+  hf_usage "<name> [count] [instance-type]"
   echo "Arguments:"
-  echo "  name            NodePool name (required)"
-  echo "  replicas        Number of replicas (default: 2)"
-  echo "  instance-type   Instance type (default: m5.xlarge)"
+  echo "  name            NodePool name prefix (required)"
+  echo "  count           Number of nodepools to create (default: 1)"
+  echo "  instance-type   Instance type (default: m4)"
   exit 1
 }
 
 hf_require_jq
 CLUSTER_ID=$(hf_cluster_id)
 
-hf_info "Creating nodepool '$NAME' in cluster: $CLUSTER_ID"
-hf_info "  Replicas: $REPLICAS, Instance type: $INSTANCE_TYPE"
+hf_info "Creating $COUNT nodepool(s) with prefix '$NAME' in cluster: $CLUSTER_ID"
+hf_info "  Instance type: $INSTANCE_TYPE"
 
-PAYLOAD=$(
-  cat <<EOF
+for ((i = 1; i <= COUNT; i++)); do
+  POOL_NAME="${NAME}-${i}"
+  hf_info "Creating nodepool '$POOL_NAME' ($i/$COUNT)..."
+
+  PAYLOAD=$(
+    cat <<EOF
 {
   "kind": "NodePool",
-  "name": "$NAME",
+  "name": "$POOL_NAME",
   "labels": {
-    "counter":"1"
+    "counter":"$i"
   },
   "spec": {
-    "replicas": $REPLICAS,
-    "counter":"1",
+    "replicas": 1,
+    "counter":"$i",
     "platform": {
       "type": "$INSTANCE_TYPE"
     }
   }
 }
 EOF
-)
+  )
 
-RESPONSE=$(hf_post "/clusters/${CLUSTER_ID}/nodepools" "$PAYLOAD")
-echo "$RESPONSE" | jq
+  RESPONSE=$(hf_post "/clusters/${CLUSTER_ID}/nodepools" "$PAYLOAD")
+  echo "$RESPONSE" | jq
 
-# Extract and save the nodepool ID
-NODEPOOL_ID=$(echo "$RESPONSE" | jq -r '.id // empty')
-if [[ -n "$NODEPOOL_ID" ]]; then
-  hf_set_nodepool_id "$NODEPOOL_ID"
-fi
+  NODEPOOL_ID=$(echo "$RESPONSE" | jq -r '.id // empty')
+  if [[ -n "$NODEPOOL_ID" ]]; then
+    hf_set_nodepool_id "$NODEPOOL_ID"
+  fi
+done

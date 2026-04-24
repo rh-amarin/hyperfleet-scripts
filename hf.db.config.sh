@@ -16,18 +16,19 @@ read -p "DB Port [$HF_DB_PORT]: " db_port
 db_port="${db_port:-$HF_DB_PORT}"
 [[ -z "$db_port" ]] && db_port="5432"
 
-read -p "DB Name [$HF_DB_NAME]: " db_name
-db_name="${db_name:-$HF_DB_NAME}"
+read -p "DB Name [${HF_DB_NAME:-hyperfleet}]: " db_name
+db_name="${db_name:-${HF_DB_NAME:-hyperfleet}}"
 
-read -p "DB User [$HF_DB_USER]: " db_user
-db_user="${db_user:-$HF_DB_USER}"
+read -p "DB User [${HF_DB_USER:-hyperfleet}]: " db_user
+db_user="${db_user:-${HF_DB_USER:-hyperfleet}}"
 
 # Password input (hidden)
 if [[ -n "$HF_DB_PASSWORD" ]]; then
     read -sp "DB Password [current: <set>]: " db_password
 else
-    read -sp "DB Password (leave empty to use .pgpass or prompt): " db_password
+    read -sp "DB Password [foobar-bizz-buzz]: " db_password
 fi
+db_password="${db_password:-${HF_DB_PASSWORD:-foobar-bizz-buzz}}"
 echo ""
 
 # Save configuration
@@ -46,13 +47,7 @@ else
     hf_warn "DB user not set"
 fi
 
-if [[ -n "$db_password" ]]; then
-    hf_set_db_password "$db_password"
-else
-    # Clear password if empty was entered
-    rm -f "$HF_DB_PASSWORD_FILE"
-    hf_info "DB password cleared (will use .pgpass or prompt)"
-fi
+hf_set_db_password "$db_password"
 
 echo ""
 hf_info "Database configuration saved to: $HF_CONFIG_DIR"

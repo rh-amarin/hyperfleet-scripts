@@ -151,10 +151,11 @@ hf_set_cluster_name() {
 }
 
 # ============================================================================
-# NodePool ID Management
+# NodePool ID & Name Management
 # ============================================================================
 
 HF_NODEPOOL_ID_FILE="$HF_CONFIG_DIR/nodepool-id"
+HF_NODEPOOL_NAME_FILE="$HF_CONFIG_DIR/nodepool-name"
 
 # Get nodepool ID from argument, file, or fail
 hf_nodepool_id() {
@@ -172,6 +173,24 @@ hf_nodepool_id() {
 hf_set_nodepool_id() {
   echo "$1" >"$HF_NODEPOOL_ID_FILE"
   hf_info "Current nodepool set to: $1"
+}
+
+# Get nodepool name from argument or file
+hf_nodepool_name() {
+  local name="${1:-}"
+  if [[ -n "$name" ]]; then
+    echo "$name"
+  elif [[ -f "$HF_NODEPOOL_NAME_FILE" ]]; then
+    cat "$HF_NODEPOOL_NAME_FILE"
+  else
+    hf_die "No nodepool name specified and none saved."
+  fi
+}
+
+# Save nodepool name to file
+hf_set_nodepool_name() {
+  echo "$1" >"$HF_NODEPOOL_NAME_FILE"
+  hf_debug "Nodepool name saved: $1"
 }
 
 # ============================================================================
