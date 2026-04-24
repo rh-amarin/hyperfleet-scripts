@@ -91,10 +91,11 @@ No other files need to change -- `hf.config.sh`, environments, and doctor all de
 
 | Script | Description |
 |--------|-------------|
-| `hf.nodepool.create.sh` | Create a node pool under the current cluster |
+| `hf.nodepool.create.sh` | Create one or more node pools under the current cluster (`name [count] [instance-type]`) |
 | `hf.nodepool.delete.sh` | Delete a node pool |
 | `hf.nodepool.get.sh` | Get node pool details |
 | `hf.nodepool.list.sh` | List node pools for the current cluster |
+| `hf.nodepool.search.sh` | Search for nodepool by name and set as current |
 | `hf.nodepool.table.sh` | Display node pools in table format |
 | `hf.nodepool.patch.sh` | Increment counter field in nodepool spec or labels |
 | `hf.nodepool.conditions.sh` | Show node pool conditions (`-w` for watch) |
@@ -110,6 +111,7 @@ No other files need to change -- `hf.config.sh`, environments, and doctor all de
 | `hf.db.query.sh` | Execute SQL queries or files |
 | `hf.db.delete.sh` | Delete database records |
 | `hf.db.statuses.sh` | Query cluster status table |
+| `hf.db.delete.all.sh` | Delete all records from adapter_statuses, node_pools, and clusters tables |
 | `hf.db.statuses.delete.sh` | Delete status records |
 
 ### Kubernetes Helpers
@@ -192,7 +194,9 @@ Maestro scripts require `maestro-cli` to be compiled and available on your `PATH
 
 | Script | Description |
 |--------|-------------|
+| `hf.table.sh` | Combined table of all clusters with their nodepools, showing ready status and adapter counts |
 | `hf.workflow.sh` | End-to-end test workflow: create cluster+nodepool, cycle adapter statuses and patches through multiple generations, then delete |
+| `hf.workflow.api-only.sh` | API-only workflow: create cluster+nodepool, post adapter statuses, and clean up without real adapters |
 | `hf.repos.sh` | Show status table for all HyperFleet GitHub repositories |
 | `hf.lib.sh` | Shared library (config registry, API helpers, logging, Kubernetes wrappers) |
 
