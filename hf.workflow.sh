@@ -1,68 +1,47 @@
 #!/bin/bash
-# create a new script hf.workflow.sh that does the following steps using the scripts:
+# Real adapter workflow: exercises the full cluster/nodepool lifecycle and waits
+# for real adapters to report status instead of simulating them via API posts.
 #
-# - first generate a random name to identify the test
+# Steps:
+# - generate a random name to identify the test
 # - create a cluster
 # - show cluster table
-# - echo a message that says "Ready should be False"
-# - post cluster adapter status for adapter1 True at generation 1
-# - post cluster adapter status for adapter2 True at generation 1
-# - show cluster table
-# - echo a message that says "Ready should be True"
+# - wait for Ready=True  (adapters converge)
 # - patch cluster labels
 # - show cluster table
-# - echo a message that says "Ready should be False"
-# - post cluster adapter status for adapter1 True at generation 2
-# - post cluster adapter status for adapter2 True at generation 2
-# - show cluster table
-# - echo a message that says "Ready should be True"
+# - wait for Ready=False (generation bump makes it not-ready)
+# - wait for Ready=True  (adapters reconverge)
 # - patch cluster spec
 # - show cluster table
-# - echo a message that says "Ready should be False"
-# - post cluster adapter status for adapter1 True at generation 3
-# - post cluster adapter status for adapter2 True at generation 3
-# - show cluster table
-# - echo a message that says "Ready should be True"
-#
+# - wait for Ready=False
+# - wait for Ready=True
 # - create a nodepool
 # - show nodepool table
-# - echo a message that says "Ready should be False"
-# - post nodepool adapter status for adapter3 True at generation 1
-# - show nodepool table
-# - echo a message that says "Ready should be True"
+# - wait for nodepool Ready=True
 # - patch nodepool labels
 # - show nodepool table
-# - echo a message that says "Ready should be False"
-# - post nodepool adapter status for adapter3 True at generation 2
-# - show nodepool table
-# - echo a message that says "Ready should be True"
+# - wait for nodepool Ready=False
+# - wait for nodepool Ready=True
 # - patch nodepool spec
 # - show nodepool table
-# - echo a message that says "Ready should be False"
-# - post nodepool adapter status for adapter3 True at generation 3
-# - show nodepool table
-# - echo a message that says "Ready should be True"
-#
+# - wait for nodepool Ready=False
+# - wait for nodepool Ready=True
 # - delete the cluster
 # - show cluster table
-# - echo a message that says "Ready should be False"
-# - post cluster adapter status for adapter1 True at generation 4
-# - post cluster adapter status for adapter2 True at generation 4
-# - show cluster table
-# - echo a message that says "Ready should be True"
-#
-# - show nodpool table
-# - echo a message that says "Ready should be False"
-# - post nodepool adapter status for adapter3 True at generation 4
+# - wait for cluster Ready=True  (deletion acknowledged)
 # - show nodepool table
-# - echo a message that says "Ready should be True"
-#
-# copy this prompt verbatim as a comment to the beginning of that script in case I want to regenerate this command
+# - wait for nodepool Ready=True (deletion acknowledged)
 
 source "$(dirname "$(realpath "$0")")/hf.lib.sh"
 hf_require_config api-url api-version
 
+hf_require_jq
+
 DIR="$(dirname "$(realpath "$0")")"
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 _step() {
   echo ""
@@ -70,10 +49,64 @@ _step() {
 }
 
 _expect() {
-  echo -e "${BOLD}${YELLOW}>>> $*${NC}"
+  echo -e "${BOLD}${YELLOW}>>> Expected: $*${NC}"
 }
 
-# Generate a random name for this test run
+# Poll until status.conditions[type=Ready].status equals $3.
+# Usage: _wait_ready <cluster|nodepool> <id> <True|False> [timeout_secs]
+_wait_ready() {
+  local resource="$1"
+  local id="$2"
+  local expected="$3"
+  local timeout="${4:-120}"
+  local interval=3
+  local elapsed=0
+  local url
+
+  case "$resource" in
+    cluster)
+      url="${HF_API_URL}/api/hyperfleet/${HF_API_VERSION}/clusters/${id}"
+      ;;
+    nodepool)
+      local cluster_id
+      cluster_id=$(hf_cluster_id)
+      url="${HF_API_URL}/api/hyperfleet/${HF_API_VERSION}/clusters/${cluster_id}/nodepools/${id}"
+      ;;
+    *)
+      hf_die "Unknown resource type: $resource"
+      ;;
+  esac
+
+  hf_info "Waiting for $resource Ready=$expected (timeout ${timeout}s)..."
+
+  while true; do
+    local status
+    status=$(curl -s "$url" | jq -r '
+      .status.conditions // [] |
+      map(select(.type == "Ready")) |
+      .[0].status // "Unknown"
+    ')
+
+    if [[ "$status" == "$expected" ]]; then
+      hf_info "  $resource Ready=$status  ✓"
+      return 0
+    fi
+
+    if (( elapsed >= timeout )); then
+      hf_error "Timed out after ${timeout}s waiting for $resource Ready=$expected (current: $status)"
+      return 1
+    fi
+
+    printf "\r  %s Ready=%-7s  waiting... %ds" "$resource" "$status" "$elapsed"
+    sleep "$interval"
+    elapsed=$(( elapsed + interval ))
+  done
+}
+
+# ---------------------------------------------------------------------------
+# Setup
+# ---------------------------------------------------------------------------
+
 TEST_ID="$(openssl rand -hex 4)"
 CLUSTER_NAME="test-${TEST_ID}"
 NODEPOOL_NAME="test-${TEST_ID}"
@@ -88,51 +121,46 @@ hf_info "  NodePool: $NODEPOOL_NAME"
 
 _step "Creating cluster: $CLUSTER_NAME"
 "$DIR/hf.cluster.create.sh" "$CLUSTER_NAME"
+CLUSTER_ID=$(hf_cluster_id)
 
 _step "Cluster table"
 "$DIR/hf.cluster.table.sh"
-_expect "Ready should be False"
+_expect "Ready=False (just created)"
 
-_step "Posting adapter1 status True (gen 1)"
-"$DIR/hf.cluster.adapter.post.status.sh" adapter1 True 1
-_step "Posting adapter2 status True (gen 1)"
-"$DIR/hf.cluster.adapter.post.status.sh" adapter2 True 1
+_step "Waiting for cluster to become Ready"
+_wait_ready cluster "$CLUSTER_ID" True
 
 _step "Cluster table"
 "$DIR/hf.cluster.table.sh"
-_expect "Ready should be True"
+_expect "Ready=True"
 
 _step "Patching cluster labels"
 "$DIR/hf.cluster.patch.sh" labels
 
 _step "Cluster table"
 "$DIR/hf.cluster.table.sh"
-_expect "Ready should be False"
+_expect "Ready=False (generation bumped)"
 
-_step "Posting adapter1 status True (gen 2)"
-"$DIR/hf.cluster.adapter.post.status.sh" adapter1 True 2
-_step "Posting adapter2 status True (gen 2)"
-"$DIR/hf.cluster.adapter.post.status.sh" adapter2 True 2
+_step "Waiting for cluster to become Ready again"
+_wait_ready cluster "$CLUSTER_ID" True
 
 _step "Cluster table"
 "$DIR/hf.cluster.table.sh"
-_expect "Ready should be True"
+_expect "Ready=True"
 
 _step "Patching cluster spec"
 "$DIR/hf.cluster.patch.sh" spec
 
 _step "Cluster table"
 "$DIR/hf.cluster.table.sh"
-_expect "Ready should be False"
+_expect "Ready=False (generation bumped)"
 
-_step "Posting adapter1 status True (gen 3)"
-"$DIR/hf.cluster.adapter.post.status.sh" adapter1 True 3
-_step "Posting adapter2 status True (gen 3)"
-"$DIR/hf.cluster.adapter.post.status.sh" adapter2 True 3
+_step "Waiting for cluster to become Ready again"
+_wait_ready cluster "$CLUSTER_ID" True
 
 _step "Cluster table"
 "$DIR/hf.cluster.table.sh"
-_expect "Ready should be True"
+_expect "Ready=True"
 
 # ---------------------------------------------------------------------------
 # NodePool lifecycle
@@ -140,45 +168,46 @@ _expect "Ready should be True"
 
 _step "Creating nodepool: $NODEPOOL_NAME"
 "$DIR/hf.nodepool.create.sh" "$NODEPOOL_NAME"
+NODEPOOL_ID=$(hf_nodepool_id)
 
 _step "NodePool table"
 "$DIR/hf.nodepool.table.sh"
-_expect "Ready should be False"
+_expect "Ready=False (just created)"
 
-_step "Posting adapter3 status True (gen 1)"
-"$DIR/hf.nodepool.adapter.post.status.sh" adapter3 True 1
+_step "Waiting for nodepool to become Ready"
+_wait_ready nodepool "$NODEPOOL_ID" True
 
 _step "NodePool table"
 "$DIR/hf.nodepool.table.sh"
-_expect "Ready should be True"
+_expect "Ready=True"
 
 _step "Patching nodepool labels"
 "$DIR/hf.nodepool.patch.sh" labels
 
 _step "NodePool table"
 "$DIR/hf.nodepool.table.sh"
-_expect "Ready should be False"
+_expect "Ready=False (generation bumped)"
 
-_step "Posting adapter3 status True (gen 2)"
-"$DIR/hf.nodepool.adapter.post.status.sh" adapter3 True 2
+_step "Waiting for nodepool to become Ready again"
+_wait_ready nodepool "$NODEPOOL_ID" True
 
 _step "NodePool table"
 "$DIR/hf.nodepool.table.sh"
-_expect "Ready should be True"
+_expect "Ready=True"
 
 _step "Patching nodepool spec"
 "$DIR/hf.nodepool.patch.sh" spec
 
 _step "NodePool table"
 "$DIR/hf.nodepool.table.sh"
-_expect "Ready should be False"
+_expect "Ready=False (generation bumped)"
 
-_step "Posting adapter3 status True (gen 3)"
-"$DIR/hf.nodepool.adapter.post.status.sh" adapter3 True 3
+_step "Waiting for nodepool to become Ready again"
+_wait_ready nodepool "$NODEPOOL_ID" True
 
 _step "NodePool table"
 "$DIR/hf.nodepool.table.sh"
-_expect "Ready should be True"
+_expect "Ready=True"
 
 # ---------------------------------------------------------------------------
 # Cluster deletion
@@ -189,16 +218,14 @@ _step "Deleting cluster: $CLUSTER_NAME"
 
 _step "Cluster table"
 "$DIR/hf.cluster.table.sh"
-_expect "Ready should be False"
+_expect "Ready=False (deletion in progress)"
 
-_step "Posting adapter1 status True (gen 4)"
-"$DIR/hf.cluster.adapter.post.status.sh" adapter1 True 4
-_step "Posting adapter2 status True (gen 4)"
-"$DIR/hf.cluster.adapter.post.status.sh" adapter2 True 4
+_step "Waiting for cluster deletion to be acknowledged"
+_wait_ready cluster "$CLUSTER_ID" True
 
 _step "Cluster table"
 "$DIR/hf.cluster.table.sh"
-_expect "Ready should be True"
+_expect "Ready=True"
 
 # ---------------------------------------------------------------------------
 # NodePool post-deletion
@@ -206,11 +233,11 @@ _expect "Ready should be True"
 
 _step "NodePool table"
 "$DIR/hf.nodepool.table.sh"
-_expect "Ready should be False"
+_expect "Ready=False (cluster deleted)"
 
-_step "Posting adapter3 status True (gen 4)"
-"$DIR/hf.nodepool.adapter.post.status.sh" adapter3 True 4
+_step "Waiting for nodepool deletion to be acknowledged"
+_wait_ready nodepool "$NODEPOOL_ID" True
 
 _step "NodePool table"
 "$DIR/hf.nodepool.table.sh"
-_expect "Ready should be True"
+_expect "Ready=True"
