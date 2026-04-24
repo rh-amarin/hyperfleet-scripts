@@ -20,14 +20,14 @@ hf_get "/clusters/${CLUSTER_ID}/nodepools" | jq -r '
   .items as $items |
 
   # Build header row
-  (["ID", "NAME", "REPLICAS", "TYPE"] + $types | @tsv),
+  (["ID", "NAME", "REPLICAS", "TYPE", "GEN"] + $types | @tsv),
 
   # Build separator row
-  (["---", "---", "---", "---"] + ($types | map("---")) | @tsv),
+  (["---", "---", "---", "---", "---"] + ($types | map("---")) | @tsv),
 
   # Build data rows
   ($items[] | . as $np |
-    [.id, .name, (.spec.replicas | tostring), (.spec.platform.type // "-")] +
+    [.id, .name, (.spec.replicas | tostring), (.spec.platform.type // "-"), (.generation // 0 | tostring)] +
     [$types[] as $t | (($np.status.conditions // []) | map(select(.type == $t)) | .[0].status |
       if . == "True" then "\u0001"
       elif . == "False" then "\u0002"

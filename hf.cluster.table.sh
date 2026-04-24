@@ -19,14 +19,14 @@ hf_get "/clusters" | jq -r '
   .items as $items |
 
   # Build header row
-  (["ID", "NAME"] + $types | @tsv),
+  (["ID", "NAME", "GEN"] + $types | @tsv),
 
   # Build separator row
-  (["---", "---"] + ($types | map("---")) | @tsv),
+  (["---", "---", "---"] + ($types | map("---")) | @tsv),
 
   # Build data rows
   ($items[] | . as $cluster |
-    [.id, .name] + [$types[] as $t | ($cluster.status.conditions | map(select(.type == $t)) | .[0].status |
+    [.id, .name, (.generation // 0 | tostring)] + [$types[] as $t | ($cluster.status.conditions | map(select(.type == $t)) | .[0].status |
       if . == "True" then "\u0001"
       elif . == "False" then "\u0002"
       elif . == "Unknown" then "\u0003"
