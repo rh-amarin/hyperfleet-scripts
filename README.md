@@ -85,6 +85,7 @@ No other files need to change -- `hf.config.sh`, environments, and doctor all de
 | `hf.cluster.conditions.sh` | Show cluster conditions (`-w` for watch) |
 | `hf.cluster.conditions.table.sh` | Show cluster conditions in table format |
 | `hf.cluster.statuses.sh` | Show cluster adapter statuses (`-w` for watch) |
+| `hf.cluster.statuses.table.sh` | Display cluster adapter statuses in table format (Available and Finalized) |
 | `hf.cluster.adapter.post.status.sh` | Post adapter status for current cluster |
 
 ### NodePool Management
@@ -101,6 +102,7 @@ No other files need to change -- `hf.config.sh`, environments, and doctor all de
 | `hf.nodepool.conditions.sh` | Show node pool conditions (`-w` for watch) |
 | `hf.nodepool.conditions.table.sh` | Show node pool conditions in table format |
 | `hf.nodepool.statuses.sh` | Show node pool adapter statuses (`-w` for watch) |
+| `hf.nodepool.statuses.table.sh` | Display node pool adapter statuses in table format (Available and Finalized) |
 | `hf.nodepool.adapter.post.status.sh` | Post adapter status for current node pool |
 
 ### Database Operations
