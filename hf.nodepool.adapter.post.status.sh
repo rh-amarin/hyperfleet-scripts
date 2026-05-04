@@ -57,6 +57,12 @@ PAYLOAD=$(
             "status": "${AVAILABLE}",
             "reason": "ManualStatusPost",
             "message": "Status posted via hf.nodepool.adapter.post.status.sh"
+        },
+        {
+            "type": "Finalized",
+            "status": "${AVAILABLE}",
+            "reason": "ManualStatusPost",
+            "message": "Status posted via hf.nodepool.adapter.post.status.sh"
         }
     ]
 }
